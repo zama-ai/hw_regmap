@@ -4,8 +4,8 @@
 //!
 //! Also provide a set of function to serde it from/toward toml file
 //!
+use indexmap::{map::Iter, IndexMap};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fs;
 
 //NB: Owner, ReadAccess, WriteAccess are splitted to ease the Serde
@@ -51,7 +51,7 @@ pub struct RegisterOpt {
     pub default_val: Option<usize>,
     pub default_param: Option<String>,
     pub offset: Option<usize>,
-    pub field: Option<HashMap<String, FieldOpt>>,
+    pub field: Option<IndexMap<String, FieldOpt>>,
     pub duplicate: Option<Vec<String>>,
 }
 
@@ -61,7 +61,7 @@ pub struct SectionOpt {
     pub offset: Option<usize>,
     pub align_offset: Option<bool>,
     pub duplicate: Option<Vec<String>>,
-    pub register: HashMap<String, RegisterOpt>,
+    pub register: IndexMap<String, RegisterOpt>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -69,7 +69,7 @@ pub struct RegmapOpt {
     pub description: String,
     pub word_size_b: usize,
     pub offset: Option<usize>,
-    pub section: HashMap<String, SectionOpt>,
+    pub section: IndexMap<String, SectionOpt>,
 }
 
 impl RegmapOpt {

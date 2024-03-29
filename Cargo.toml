@@ -10,4 +10,4 @@ serde = { version = "1", features = ["derive"]}
 toml = {version = "*", features = ["preserve_order"]}
 thiserror = "1.0"
 anyhow = "1.0"
-indexmap = "2.2.6"
+indexmap = {version = "2.2.6", features = ["serde"]}
