@@ -11,3 +11,10 @@ toml = {version = "*", features = ["preserve_order"]}
 thiserror = "1.0"
 anyhow = "1.0"
 indexmap = {version = "2.2.6", features = ["serde"]}
+clap = { version = "*", features = ["derive"] }
+getset = "0.1.2"
+tera = "1.0"
+
+[[bin]]
+name = "tera"
+path = "src/tera.rs"

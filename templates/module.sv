@@ -36,8 +36,7 @@
 //      : Value provided by the RTL. The host can read it with notify. The write data is processed by the RTL.
 // ============================================================================================== //
 
-module {{name}}
-#({%- for reg in {{regs_sv}} -%} {{reg.param_snippets}} {% if !loop.last %}, {% endif %}  {% endfor %})(
+module {{name}} {% raw %}#({% endraw %}{%- for reg in regs_sv -%} {{reg.param_snippets}} {% if not loop.last %}, {% endif %}  {% endfor %})(
   input  logic                           clk,
   input  logic                           s_rst_n,
 
@@ -59,8 +58,8 @@ module {{name}}
   output logic                           s_axi4l_rvalid,
   input  logic                           s_axi4l_rready,
 
-  {%- for reg in {{regs_sv}} -%}
-    {{reg.io_snippets}} {% if !loop.last %}, {% endif %}
+  {%- for reg in regs_sv -%}
+    {{reg.io_snippets}} {% if not loop.last %}, {% endif %}
   {% endfor %}
 
 );
@@ -187,7 +186,7 @@ module {{name}}
 // ============================================================================================== --
   // To ease the code, use REG_DATA_W as register size.
   // Unused bits will be simplified by the synthesizer
-  {%- for reg in {{regs_sv}} -%}
+  {%- for reg in regs_sv -%}
     {{reg.ff_wr_snippets}}
   {% endfor %}
 
@@ -205,7 +204,7 @@ module {{name}}
       if (rd_en) begin
         axi4l_rrespD = AXI4_SLVERR;
         case(rd_add)
-        {%- for reg in {{regs_sv}} -%}
+        {%- for reg in regs_sv -%}
           {{reg.ff_wr_snippets}}
         {% endfor %}
         endcase // rd_add

@@ -1,8 +1,8 @@
 pub mod parser;
 
 use indexmap::{map::Iter, IndexMap};
-// use std::collections::hash_map::Iter;
 
+use getset::Getters;
 use parser::{Owner, ReadAccess, WriteAccess};
 use thiserror::Error;
 
@@ -22,6 +22,15 @@ pub enum Default {
     Param(String),
 }
 
+impl Default {
+    pub fn to_sv_string(&self) -> String {
+        match self {
+            Self::Val(val) => format!("'h{:x}", val),
+            Self::Param(str) => str.clone(),
+        }
+    }
+}
+
 /// Field parsing error
 /// Descibe potential field error and imcompatible options
 #[derive(Error, Debug, Clone)]
@@ -30,7 +39,8 @@ pub enum FieldError {
     WordBoundary(parser::FieldOpt),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Getters)]
+#[getset(get = "pub")]
 pub struct Field {
     description: String,
     size_b: usize,
@@ -106,7 +116,8 @@ pub enum RegisterError {
     #[error("Invalid offset:\n  => {self:?}")]
     Offset(parser::RegisterOpt),
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Getters)]
+#[getset(get = "pub")]
 pub struct Register {
     description: String,
     owner: Owner,
@@ -234,7 +245,8 @@ pub enum SectionError {
     #[error("Invalid offset:\n  => {self:?}")]
     Offset(parser::SectionOpt),
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Getters)]
+#[getset(get = "pub")]
 pub struct Section {
     description: String,
     offset: usize,
@@ -253,7 +265,6 @@ impl Section {
         let mut nxt_offset = offset;
 
         for (name, section) in sections {
-            println!("{name} => {nxt_offset}");
             // Check correctness of offset
             let sec_offset = match section.offset {
                 Some(ofst) => ofst,
@@ -315,7 +326,8 @@ impl std::fmt::Display for Section {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Getters)]
+#[getset(get = "pub")]
 pub struct Regmap {
     description: String,
     word_size_b: usize,

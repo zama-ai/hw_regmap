@@ -14,13 +14,13 @@
     end
 
   always_comb begin
-    r_{{main}}D       = r_{{main}}_upd;
-    r_{{main}}_wr_enD = 1'b0;
+    r_{{name}}D       = r_{{name}}_upd;
+    r_{{name}}_wr_enD = 1'b0;
     if (wr_en) begin
       case (wr_add)
         {{ offset }}: begin
-          r_{{main}}D       = wr_data;
-          r_{{main}}_wr_enD = 1'b1;
+          r_{{name}}D       = wr_data;
+          r_{{name}}_wr_enD = 1'b1;
         end
       endcase
     end // if wr_en
