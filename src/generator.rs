@@ -31,17 +31,11 @@ impl SvRegister {
         // Expand Owner/Mode to ease tera templating
         context.insert(
             "param_reg",
-            &match register_props.owner() {
-                Owner::Parameter => true,
-                _ => false,
-            },
+            &matches!(register_props.owner(), Owner::Parameter),
         );
         context.insert(
             "reg_update",
-            &match register_props.owner() {
-                Owner::Kernel | Owner::Both => true,
-                _ => false,
-            },
+            &matches!(register_props.owner(), Owner::Kernel | Owner::Both),
         );
         context.insert(
             "wr_user",
@@ -52,24 +46,18 @@ impl SvRegister {
         );
         context.insert(
             "rd_notify",
-            &match register_props.read_access() {
-                ReadAccess::ReadNotify => true,
-                _ => false,
-            },
+            &matches!(register_props.read_access(), ReadAccess::ReadNotify),
         );
         context.insert(
             "wr_notify",
-            &match register_props.write_access() {
-                WriteAccess::WriteNotify | WriteAccess::WriteAction => true,
-                _ => false,
-            },
+            &matches!(
+                register_props.write_access(),
+                WriteAccess::WriteNotify | WriteAccess::WriteAction
+            ),
         );
         context.insert(
             "wr_action",
-            &match register_props.write_access() {
-                WriteAccess::WriteAction => true,
-                _ => false,
-            },
+            &matches!(register_props.write_access(), WriteAccess::WriteAction),
         );
 
         // Render Param section
@@ -82,7 +70,6 @@ impl SvRegister {
         let io_snippets = match register_props.owner() {
             Owner::Parameter => String::new(),
             _ => tera.render("module/io.sv", &context).unwrap(),
-            _ => String::new(),
         };
 
         let ff_wr_snippets = tera.render("module/write.sv", &context).unwrap();

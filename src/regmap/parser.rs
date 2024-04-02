@@ -4,7 +4,7 @@
 //!
 //! Also provide a set of function to serde it from/toward toml file
 //!
-use indexmap::{map::Iter, IndexMap};
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::fs;
 

@@ -1,8 +1,8 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
-use tera::{from_value, to_value, Function, Tera, Value};
+use tera::{from_value, to_value, Tera, Value};
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 #[derive(Serialize, Clone)]
 pub struct Register {

@@ -144,10 +144,10 @@ impl Field {
 
 impl std::fmt::Display for Field {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "      description: {}\n", self.description)?;
-        write!(
+        writeln!(f, "      description: {}", self.description)?;
+        writeln!(
             f,
-            "      size_b: {}, offset_b: {}, default: {:?}\n",
+            "      size_b: {}, offset_b: {}, default: {:?}",
             self.size_b, self.offset_b, self.default
         )?;
         Ok(())
@@ -262,7 +262,7 @@ impl Register {
                         Some(_f) => {
                             return Err(DefaultError::Override(name.clone()).into());
                         }
-                        None => Default::Val(v.clone()),
+                        None => Default::Val(v),
                     },
                     (Some(v), Some(p)) => {
                         return Err(DefaultError::BothSpecified(v, p.clone()).into());
@@ -304,10 +304,10 @@ impl Register {
 
 impl std::fmt::Display for Register {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "    description: {}\n", self.description)?;
-        write!(
+        writeln!(f, "    description: {}", self.description)?;
+        writeln!(
             f,
-            "    Access: {:?}, {:?}, {:?}, offset: 0x{:x}, default: {:?}\n",
+            "    Access: {:?}, {:?}, {:?}, offset: 0x{:x}, default: {:?}",
             self.owner, self.read_access, self.write_access, self.offset, self.default
         )?;
         if self.field.is_some() {
@@ -317,7 +317,7 @@ impl std::fmt::Display for Register {
                 write!(f, "{field}")?;
                 write!(f, "    ]")?;
             }
-            write!(f, "    ]\n")?;
+            writeln!(f, "    ]")?;
         }
         Ok(())
     }
@@ -410,10 +410,10 @@ impl Section {
 
 impl std::fmt::Display for Section {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "  description: {}\n", self.description)?;
-        write!(
+        writeln!(f, "  description: {}", self.description)?;
+        writeln!(
             f,
-            "  offset: 0x{:x}, align_offset: {:?}\n",
+            "  offset: 0x{:x}, align_offset: {:?}",
             self.offset, self.align_offset
         )?;
         write!(f, "  Register: [")?;
@@ -422,7 +422,7 @@ impl std::fmt::Display for Section {
             write!(f, "{reg}")?;
             write!(f, "  ]")?;
         }
-        write!(f, "  ]\n")?;
+        writeln!(f, "  ]")?;
         Ok(())
     }
 }
@@ -453,10 +453,10 @@ impl Regmap {
 
 impl std::fmt::Display for Regmap {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "description: {}\n", self.description)?;
-        write!(
+        writeln!(f, "description: {}", self.description)?;
+        writeln!(
             f,
-            "offset: 0x{:x}, word_size_b: {:?}\n",
+            "offset: 0x{:x}, word_size_b: {:?}",
             self.offset, self.word_size_b
         )?;
         write!(f, "Section: [")?;
@@ -465,7 +465,7 @@ impl std::fmt::Display for Regmap {
             write!(f, "{sec}")?;
             write!(f, "]")?;
         }
-        write!(f, "]\n")?;
+        writeln!(f, "]")?;
         Ok(())
     }
 }
