@@ -1,7 +1,8 @@
 // ============================================================================================== //
 // Description  : Axi4-lite register bank
 // This file was generated with rust regmap generator:
-//  * Date:  {{ now }}
+//  * Date:  {{ now() | date(format="%Y-%m-%d") }}
+//  * Tool_version: {{ tool_version }}
 // ---------------------------------------------------------------------------------------------- //
 // TODO update naming definition
 // xR[n]W[na]

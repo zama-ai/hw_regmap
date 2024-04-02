@@ -1,10 +1,6 @@
 mod generator;
 mod regmap;
 
-use std::fs;
-use std::process::exit;
-
-use indexmap::IndexMap;
 use tera::Tera;
 
 /// Define CLI arguments
@@ -54,7 +50,7 @@ fn main() {
 
     // Create a new Tera instance
     // Analyse all available template
-    let mut tera = Tera::new("templates/**/*").unwrap();
+    let tera = Tera::new("templates/**/*").unwrap();
 
     if let Some(rtl_module) = args.rtl_module {
         // Convert regmap in rtl snippets based on Tera
@@ -69,8 +65,9 @@ fn main() {
 
         // Expand to rtl module and store in targeted file
         let mut context = tera::Context::new();
-        context.insert("tool_version", "pre-alpha"); //TODO
-        context.insert("now", "today"); // TODO
+        // Extract version from env
+        let git_version = option_env!("GIT_VERSION").unwrap_or("unknow");
+        context.insert("tool_version", git_version);
         context.insert("name", "build_my_name"); // TODO
         context.insert("word_size_b", &regmap.word_size_b());
         context.insert("regs_sv", &regs_sv);
