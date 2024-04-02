@@ -38,7 +38,7 @@
 module {{name}} {% raw %}#({% endraw %}
   parmameter int REG_DATA_W = {{word_size_b}}
   {%- for reg in regs_sv -%}
-  {%- if reg.param_snippets != "" -%},
+  {%- if reg.param_snippets != "" -%}
   {{reg.param_snippets}}
   {%- endif -%}
   {%- endfor -%})(

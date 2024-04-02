@@ -33,7 +33,7 @@
 
   always_ff @(posedge clk)
     if (!s_rst_n) begin
-      r_{{name}}       <= {{ default }};
+      r_{{name}}       <= {{ default_val }};
       {% if wr_notify     %}r_{{name}}_wr_en <= 1'b0;         {% endif %}
       {% if wr_action     %}r_{{name}}_wdata <=  'h0;         {% endif %}
       {% if rd_notify     %}r_{{name}}_rd_en <= 1'b0;         {% endif %}

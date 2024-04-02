@@ -25,7 +25,9 @@ impl SvRegister {
         let full_name = format!("{section_name}_{register_name}");
         context.insert("name", &full_name);
         context.insert("offset", register_props.offset());
-        context.insert("default", &register_props.default().to_sv_string());
+        let (dn, dv) = register_props.default().to_sv_namesval();
+        context.insert("default_name", &dn);
+        context.insert("default_val", &dv);
         // Expand Owner/Mode to ease tera templating
         context.insert(
             "param_reg",
@@ -44,7 +46,7 @@ impl SvRegister {
         context.insert(
             "wr_user",
             &match register_props.owner() {
-                Owner::User | Owner::Both => (register_props.write_access() != &WriteAccess::None),
+                Owner::User | Owner::Both => register_props.write_access() != &WriteAccess::None,
                 _ => false,
             },
         );

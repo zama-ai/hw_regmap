@@ -14,19 +14,30 @@ pub enum DefaultError {
         "Incompatible default value/params. Only one could be specified at a time:\n  => {self:?}."
     )]
     BothSpecified(usize, String),
+
+    #[error("Expect a Parameter name:\n  => {self:?}.")]
+    ExpectParam(String),
+    #[error("Expect a default value:\n  => {self:?}.")]
+    ExpectValue(String),
+    #[error("Default parameter missing.\n")]
+    Missing,
+    #[error("Redefined at outer level: \n => {self:?}")]
+    Override(String),
 }
 
 #[derive(Debug, Clone)]
 pub enum Default {
     Val(usize),
     Param(String),
+    ParamField { name: Vec<String>, value: String },
 }
 
 impl Default {
-    pub fn to_sv_string(&self) -> String {
+    pub fn to_sv_namesval(&self) -> (Vec<String>, String) {
         match self {
-            Self::Val(val) => format!("'h{:x}", val),
-            Self::Param(str) => str.clone(),
+            Self::Val(val) => (vec![], format!("'h{:x}", val)),
+            Self::Param(str) => (vec![str.clone()], str.clone()),
+            Self::ParamField { name, value } => (name.clone(), value.clone()),
         }
     }
 }
@@ -87,6 +98,48 @@ impl Field {
         }
         Ok(expanded_field)
     }
+
+    pub fn get_default(
+        fields: &IndexMap<String, Self>,
+        owner: &Owner,
+    ) -> Result<Default, anyhow::Error> {
+        match owner {
+            Owner::Parameter => {
+                let mut params_name = Vec::new();
+                let mut params_value = String::new();
+
+                for (k, f) in fields.iter() {
+                    let param = match &f.default {
+                        Default::Param(p) => p.clone(),
+                        _ => {
+                            return Err(DefaultError::ExpectParam(k.clone()).into());
+                        }
+                    };
+                    params_value += &format!("+({param} << {})", f.offset_b);
+                    params_name.push(param);
+                }
+                Ok(Default::ParamField {
+                    name: params_name,
+                    value: params_value,
+                })
+            }
+            _ => {
+                let mut value = 0_usize;
+
+                for (k, f) in fields.iter() {
+                    match f.default {
+                        Default::Val(v) => {
+                            value += v << f.offset_b;
+                        }
+                        _ => {
+                            return Err(DefaultError::ExpectValue(k.clone()).into());
+                        }
+                    }
+                }
+                Ok(Default::Val(value))
+            }
+        }
+    }
 }
 
 impl std::fmt::Display for Field {
@@ -105,13 +158,13 @@ impl std::fmt::Display for Field {
 /// Descibe potential register error and imcompatible options
 #[derive(Error, Debug, Clone)]
 pub enum RegisterError {
-    #[error("Imcompatible Access right for Parameter:\n  => {self:?}")]
+    #[error("Incompatible Access right for Parameter:\n  => {self:?}")]
     ParameterAccess(parser::RegisterOpt),
-    #[error("Imcompatible Access right for User:\n  => {self:?}")]
+    #[error("Incompatible Access right for User:\n  => {self:?}")]
     UserAccess(parser::RegisterOpt),
-    #[error("Imcompatible Access right for Kernel:\n  => {self:?}")]
+    #[error("Incompatible Access right for Kernel:\n  => {self:?}")]
     KernelAccess(parser::RegisterOpt),
-    #[error("Imcompatible Access right for Both:\n  => {self:?}")]
+    #[error("Incompatible Access right for Both:\n  => {self:?}")]
     BothAccess(parser::RegisterOpt),
     #[error("Invalid offset:\n  => {self:?}")]
     Offset(parser::RegisterOpt),
@@ -142,20 +195,20 @@ impl Register {
             // Check correctness of the mode
             match (register.owner, register.read_access, register.write_access) {
                 (Owner::Parameter, ReadAccess::Read, WriteAccess::None) => {}
-                (Owner::Parameter, rd, wr) => {
+                (Owner::Parameter, _rd, _wr) => {
                     return Err(RegisterError::ParameterAccess(register.clone()).into())
                 }
-                (Owner::User, rd, WriteAccess::WriteAction) => {
+                (Owner::User, _rd, WriteAccess::WriteAction) => {
                     return Err(RegisterError::UserAccess(register.clone()).into())
                 }
-                (Owner::User, rd, wr) => {}
-                (Owner::Kernel, rd, WriteAccess::WriteAction)
-                | (Owner::Kernel, rd, WriteAccess::None) => {}
-                (Owner::Kernel, rd, wr) => {
+                (Owner::User, _rd, _wr) => {}
+                (Owner::Kernel, _rd, WriteAccess::WriteAction)
+                | (Owner::Kernel, _rd, WriteAccess::None) => {}
+                (Owner::Kernel, _rd, _wr) => {
                     return Err(RegisterError::KernelAccess(register.clone()).into())
                 }
-                (Owner::Both, rd, WriteAccess::WriteAction) => {}
-                (Owner::Both, rd, wr) => {
+                (Owner::Both, _rd, WriteAccess::WriteAction) => {}
+                (Owner::Both, _rd, _wr) => {
                     return Err(RegisterError::BothAccess(register.clone()).into())
                 }
             }
@@ -169,20 +222,52 @@ impl Register {
                 return Err(RegisterError::Offset(register.clone()).into());
             }
 
-            // Expand default
-            let default = match (register.default_val, &register.param_name) {
-                (None, None) => Default::Val(0),
-                (None, Some(p)) => Default::Param(p.clone()),
-                (Some(v), None) => Default::Val(v),
-                (Some(v), Some(p)) => {
-                    return Err(DefaultError::BothSpecified(v, p.clone()).into());
-                }
-            };
-
             // Expand inner
             let expand_field = match register.field.as_ref() {
                 Some(fields) => Some(Field::from_opt(&mut fields.iter(), word_size)?),
                 None => None,
+            };
+
+            // Expand default
+            let default = match register.owner {
+                Owner::Parameter => match (register.default_val, &register.param_name) {
+                    (None, None) => match expand_field.as_ref() {
+                        Some(f) => Field::get_default(f, &register.owner)?,
+                        None => {
+                            return Err(DefaultError::Missing.into());
+                        }
+                    },
+                    (None, Some(p)) => match expand_field.as_ref() {
+                        Some(_f) => {
+                            return Err(DefaultError::Override(name.clone()).into());
+                        }
+                        None => Default::Param(p.clone()),
+                    },
+                    (Some(_), None) => {
+                        return Err(DefaultError::ExpectParam(name.clone()).into());
+                    }
+                    (Some(v), Some(p)) => {
+                        return Err(DefaultError::BothSpecified(v, p.clone()).into());
+                    }
+                },
+                _ => match (register.default_val, &register.param_name) {
+                    (None, None) => match expand_field.as_ref() {
+                        Some(f) => Field::get_default(f, &register.owner)?,
+                        None => Default::Val(0),
+                    },
+                    (None, Some(_p)) => {
+                        return Err(DefaultError::ExpectValue(name.clone()).into());
+                    }
+                    (Some(v), None) => match expand_field.as_ref() {
+                        Some(_f) => {
+                            return Err(DefaultError::Override(name.clone()).into());
+                        }
+                        None => Default::Val(v.clone()),
+                    },
+                    (Some(v), Some(p)) => {
+                        return Err(DefaultError::BothSpecified(v, p.clone()).into());
+                    }
+                },
             };
 
             // Build register instance
