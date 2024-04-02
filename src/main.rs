@@ -62,11 +62,7 @@ fn main() {
         regmap.section().iter().for_each(|(sec_name, sec)| {
             sec.register().iter().for_each(|(reg_name, reg)| {
                 regs_sv.push(generator::SvRegister::from_register(
-                    regmap.word_size_b(),
-                    sec_name,
-                    reg_name,
-                    reg,
-                    &tera,
+                    sec_name, reg_name, reg, &tera,
                 ));
             })
         });
@@ -76,6 +72,7 @@ fn main() {
         context.insert("tool_version", "pre-alpha"); //TODO
         context.insert("now", "today"); // TODO
         context.insert("name", "build_my_name"); // TODO
+        context.insert("word_size_b", &regmap.word_size_b());
         context.insert("regs_sv", &regs_sv);
         let module_rendered = tera.render("module.sv", &context).unwrap();
 

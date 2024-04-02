@@ -36,8 +36,12 @@
 // ============================================================================================== //
 
 module {{name}} {% raw %}#({% endraw %}
-  parmameter str TOOL_VERSION = "{{tool_version}}"{%- for reg in regs_sv -%}{%- if reg.param_snippets != "" -%},
-  {{reg.param_snippets}}{%- endif -%}{%- endfor -%})(
+  parmameter int REG_DATA_W = {{word_size_b}}
+  {%- for reg in regs_sv -%}
+  {%- if reg.param_snippets != "" -%},
+  {{reg.param_snippets}}
+  {%- endif -%}
+  {%- endfor -%})(
   input  logic                           clk,
   input  logic                           s_rst_n,
 

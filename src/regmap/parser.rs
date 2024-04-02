@@ -10,7 +10,7 @@ use std::fs;
 
 //NB: Owner, ReadAccess, WriteAccess are splitted to ease the Serde
 //    and have a clear naming in toml without manual implementation of the serde traits
-#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 pub enum Owner {
     User,
     Kernel,
@@ -18,14 +18,14 @@ pub enum Owner {
     Parameter,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 pub enum ReadAccess {
     None,
     Read,
     ReadNotify,
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 pub enum WriteAccess {
     None,
     Write,
