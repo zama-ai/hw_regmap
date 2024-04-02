@@ -1,7 +1,6 @@
 // ============================================================================================== //
 // Description  : Axi4-lite register bank
 // This file was generated with rust regmap generator:
-//  * Tool version: {{ tool_version}}
 //  * Date:  {{ now }}
 // ---------------------------------------------------------------------------------------------- //
 // TODO update naming definition
@@ -36,7 +35,9 @@
 //      : Value provided by the RTL. The host can read it with notify. The write data is processed by the RTL.
 // ============================================================================================== //
 
-module {{name}} {% raw %}#({% endraw %}{%- for reg in regs_sv -%} {{reg.param_snippets}} {% if not loop.last %}, {% endif %}  {% endfor %})(
+module {{name}} {% raw %}#({% endraw %}
+  parmameter str TOOL_VERSION = "{{tool_version}}"{%- for reg in regs_sv -%}{%- if reg.param_snippets != "" -%},
+  {{reg.param_snippets}}{%- endif -%}{%- endfor -%})(
   input  logic                           clk,
   input  logic                           s_rst_n,
 
@@ -56,12 +57,10 @@ module {{name}} {% raw %}#({% endraw %}{%- for reg in regs_sv -%} {{reg.param_sn
   output logic [AXI4L_DATA_W-1:0]        s_axi4l_rdata,
   output logic [1:0]                     s_axi4l_rresp,
   output logic                           s_axi4l_rvalid,
-  input  logic                           s_axi4l_rready,
-
+  input  logic                           s_axi4l_rready
   {%- for reg in regs_sv -%}
-    {{reg.io_snippets}} {% if not loop.last %}, {% endif %}
-  {% endfor %}
-
+  {%- if reg.io_snippets != "" -%}{{reg.io_snippets}}{%- endif -%}
+  {%- endfor -%}
 );
 
 // ============================================================================================== --
@@ -186,9 +185,7 @@ module {{name}} {% raw %}#({% endraw %}{%- for reg in regs_sv -%} {{reg.param_sn
 // ============================================================================================== --
   // To ease the code, use REG_DATA_W as register size.
   // Unused bits will be simplified by the synthesizer
-  {%- for reg in regs_sv -%}
-    {{reg.ff_wr_snippets}}
-  {% endfor %}
+  {%- for reg in regs_sv -%}{{reg.ff_wr_snippets}}{% endfor %}
 
 // ============================================================================================== --
 // Read reg
@@ -204,9 +201,7 @@ module {{name}} {% raw %}#({% endraw %}{%- for reg in regs_sv -%} {{reg.param_sn
       if (rd_en) begin
         axi4l_rrespD = AXI4_SLVERR;
         case(rd_add)
-        {%- for reg in regs_sv -%}
-          {{reg.ff_wr_snippets}}
-        {% endfor %}
+        {%- for reg in regs_sv -%}{{reg.rd_snippets}}{% endfor %}
         endcase // rd_add
       end // if rd_end
     end

@@ -65,7 +65,7 @@ impl Field {
                 return Err(FieldError::WordBoundary(field.clone()).into());
             }
 
-            let default = match (field.default_val, &field.default_param) {
+            let default = match (field.default_val, &field.param_name) {
                 (None, None) => Default::Val(0),
                 (None, Some(p)) => Default::Param(p.clone()),
                 (Some(v), None) => Default::Val(v),
@@ -170,7 +170,7 @@ impl Register {
             }
 
             // Expand default
-            let default = match (register.default_val, &register.default_param) {
+            let default = match (register.default_val, &register.param_name) {
                 (None, None) => Default::Val(0),
                 (None, Some(p)) => Default::Param(p.clone()),
                 (Some(v), None) => Default::Val(v),
@@ -274,32 +274,48 @@ impl Section {
                 return Err(SectionError::Offset(section.clone()).into());
             }
 
-            // Expand inner
-            let expanded_reg =
-                Register::from_opt(&mut section.register.iter(), nxt_offset, word_size)?;
-
-            // Build section instance
-            let mut sec = Self {
-                description: section.description.clone(),
-                offset: nxt_offset,
-                align_offset: section.align_offset.unwrap_or(false),
-                register: expanded_reg.clone(),
-            };
-
             // Duplicate if required
+            // Have to regenerate register with updated offset in each duplicated section
             match section.duplicate.as_ref() {
                 Some(suffix) => {
                     for s in suffix.iter() {
+                        // Expand inner
+                        let expanded_reg = Register::from_opt(
+                            &mut section.register.iter(),
+                            nxt_offset,
+                            word_size,
+                        )?;
+
                         let full_name = format!("{}{}", name, s);
-                        // patch offset and insert
-                        sec.offset = nxt_offset;
-                        nxt_offset += sec.register.len() * word_bytes;
-                        let _ = expanded_section.insert(full_name, sec.clone());
+                        // update offset and insert
+                        nxt_offset += expanded_reg.len() * word_bytes;
+                        let _ = expanded_section.insert(
+                            full_name,
+                            Self {
+                                description: section.description.clone(),
+                                offset: nxt_offset,
+                                align_offset: section.align_offset.unwrap_or(false),
+                                register: expanded_reg.clone(),
+                            },
+                        );
                     }
                 }
                 None => {
-                    nxt_offset += sec.register.len() * word_bytes;
-                    let _ = expanded_section.insert(name.clone(), sec);
+                    // Expand inner
+                    let expanded_reg =
+                        Register::from_opt(&mut section.register.iter(), nxt_offset, word_size)?;
+
+                    // update offset and insert
+                    nxt_offset += expanded_reg.len() * word_bytes;
+                    let _ = expanded_section.insert(
+                        name.clone(),
+                        Self {
+                            description: section.description.clone(),
+                            offset: nxt_offset,
+                            align_offset: section.align_offset.unwrap_or(false),
+                            register: expanded_reg.clone(),
+                        },
+                    );
                 }
             }
         }

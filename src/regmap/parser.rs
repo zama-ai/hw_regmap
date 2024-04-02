@@ -39,7 +39,7 @@ pub struct FieldOpt {
     pub size_b: usize,
     pub offset_b: Option<usize>,
     pub default_val: Option<usize>,
-    pub default_param: Option<String>,
+    pub param_name: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -49,7 +49,7 @@ pub struct RegisterOpt {
     pub read_access: ReadAccess,
     pub write_access: WriteAccess,
     pub default_val: Option<usize>,
-    pub default_param: Option<String>,
+    pub param_name: Option<String>,
     pub offset: Option<usize>,
     pub field: Option<IndexMap<String, FieldOpt>>,
     pub duplicate: Option<Vec<String>>,
