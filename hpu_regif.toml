@@ -1,5 +1,6 @@
 # This is a sample example of register-map definition
 
+module_name="hpu_regif"
 description="Hpu top-level register interface. Used by the host to retrieved RTL information, configure it and issue commands."
 word_size_b = 32
 offset = 0x00

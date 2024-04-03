@@ -66,6 +66,7 @@ pub struct SectionOpt {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RegmapOpt {
+    pub module_name: String,
     pub description: String,
     pub word_size_b: usize,
     pub offset: Option<usize>,

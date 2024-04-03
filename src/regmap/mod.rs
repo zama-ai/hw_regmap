@@ -430,6 +430,7 @@ impl std::fmt::Display for Section {
 #[derive(Debug, Getters)]
 #[getset(get = "pub")]
 pub struct Regmap {
+    module_name: String,
     description: String,
     word_size_b: usize,
     offset: usize,
@@ -448,6 +449,7 @@ impl Regmap {
                 .max()
                 .unwrap();
         Ok(Self {
+            module_name: regmap.module_name,
             description: regmap.description,
             word_size_b: regmap.word_size_b,
             offset,

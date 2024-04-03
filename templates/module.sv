@@ -36,7 +36,7 @@
 //      : Value provided by the RTL. The host can read it with notify. The write data is processed by the RTL.
 // ============================================================================================== //
 
-module {{name}} {% raw %}#({% endraw %}
+module {{module_name}} {% raw %}#({% endraw %}
   parameter int REG_DATA_W = {{word_size_b}},
   parameter int AXI4L_ADD_OFS = {{offset}},
   parameter int AXI4L_ADD_RANGE= {{range}},

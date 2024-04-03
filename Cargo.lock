@@ -682,6 +682,7 @@ dependencies = [
  "clap",
  "getset",
  "indexmap",
+ "regex",
  "serde",
  "tera",
  "thiserror",
