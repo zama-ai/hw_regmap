@@ -37,7 +37,11 @@
 // ============================================================================================== //
 
 module {{name}} {% raw %}#({% endraw %}
-  parmameter int REG_DATA_W = {{word_size_b}}
+  parameter int REG_DATA_W = {{word_size_b}},
+  parameter int AXI4L_ADD_OFS = {{offset}},
+  parameter int AXI4L_ADD_RANGE= {{range}},
+  parameter int AXI4L_ADD_W,
+  parameter int AXI4L_DATA_W
   {%- for reg in regs_sv -%}
   {%- if reg.param_snippets != "" -%}
   {{reg.param_snippets}}
@@ -67,6 +71,11 @@ module {{name}} {% raw %}#({% endraw %}
   {%- if reg.io_snippets != "" -%}{{reg.io_snippets}}{%- endif -%}
   {%- endfor -%}
 );
+
+// ============================================================================================== --
+// Common package
+// ============================================================================================== --
+import axi_if_common_param_pkg::*;
 
 // ============================================================================================== --
 // Axi4l management

@@ -433,19 +433,25 @@ pub struct Regmap {
     description: String,
     word_size_b: usize,
     offset: usize,
+    range: usize,
     section: IndexMap<String, Section>,
 }
 
 impl Regmap {
     pub fn from_opt(regmap: parser::RegmapOpt) -> Result<Self, anyhow::Error> {
         let offset = regmap.offset.unwrap_or(0);
-
         let section = Section::from_opt(&mut regmap.section.iter(), offset, regmap.word_size_b)?;
-
+        let range = (regmap.word_size_b / 8)
+            * section
+                .iter()
+                .map(|(_sn, s)| s.register.iter().map(|(_rn, r)| r.offset).max().unwrap())
+                .max()
+                .unwrap();
         Ok(Self {
             description: regmap.description,
             word_size_b: regmap.word_size_b,
             offset,
+            range,
             section,
         })
     }

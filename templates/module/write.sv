@@ -31,7 +31,7 @@
   assign r_{{name}}_rd_enD = rd_en && (rd_add == {{ offset }});
   {% endif %}
 
-  always_ff @(posedge clk)
+  always_ff @(posedge clk) begin
     if (!s_rst_n) begin
       r_{{name}}       <= {{ default_val }};
       {% if wr_notify     %}r_{{name}}_wr_en <= 1'b0;         {% endif %}

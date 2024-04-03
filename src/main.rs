@@ -70,6 +70,8 @@ fn main() {
         context.insert("tool_version", git_version);
         context.insert("name", "build_my_name"); // TODO
         context.insert("word_size_b", &regmap.word_size_b());
+        context.insert("offset", &regmap.offset());
+        context.insert("range", &regmap.range());
         context.insert("regs_sv", &regs_sv);
         let module_rendered = tera.render("module.sv", &context).unwrap();
 
