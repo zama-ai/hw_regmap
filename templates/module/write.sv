@@ -6,19 +6,19 @@
 
   {%  if reg_update %}
     {%  if wr_user %}
-  assign r_{{name}}D = (wr_en && (wr_add == {{offset}}))? wr_data: r_{{name}}_upd;
+  assign r_{{name}}D = (wr_en && (wr_add == {{offset_cst_name}}))? wr_data: r_{{name}}_upd;
     {% else %}
   assign r_{{name}}D       = r_{{name}}_upd;
     {% endif %}
   {% else %}
     {%  if wr_user %}
-  assign r_{{name}}D = (wr_en && (wr_add == {{offset}}))? wr_data: r_{{name}};
+  assign r_{{name}}D = (wr_en && (wr_add == {{offset_cst_name}}))? wr_data: r_{{name}};
     {% endif %}
   {% endif %}
 
   {% if wr_notify %}
   logic r_{{name}}_wr_enD;
-  assign r_{{name}}_wr_enD = wr_en && (wr_add == {{ offset }});
+  assign r_{{name}}_wr_enD = wr_en && (wr_add == {{ offset_cst_name }});
   {% endif %}
 
   {% if wr_action %}
@@ -28,7 +28,7 @@
 
   {% if rd_notify %}
   logic r_{{name}}_rd_enD;
-  assign r_{{name}}_rd_enD = rd_en && (rd_add == {{ offset }});
+  assign r_{{name}}_rd_enD = rd_en && (rd_add == {{ offset_cst_name }});
   {% endif %}
 
   always_ff @(posedge clk) begin

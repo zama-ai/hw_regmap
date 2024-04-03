@@ -9,7 +9,7 @@
 // ============================================================================================== //
 
 package {{module_name}}_addr_pkg;
-  {% for name, offset in regs_hash %}
-  parameter int {{name}} = {{offset}};
+  {% for cst_name, offset in regs_hash %}
+  parameter int {{cst_name}} = {{offset}};
   {% endfor %}
 endpackage

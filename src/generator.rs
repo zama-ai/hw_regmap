@@ -23,8 +23,10 @@ impl SvRegister {
     ) -> Self {
         let mut context = tera::Context::new();
         let full_name = format!("{section_name}_{register_name}");
+        let mut cst_name = format!("{section_name}_{register_name}_OFS");
+        cst_name.make_ascii_uppercase();
         context.insert("name", &full_name);
-        context.insert("offset", register_props.offset());
+        context.insert("offset_cst_name", &cst_name);
         let (dn, dv) = register_props.default().to_sv_namesval();
         context.insert("default_name", &dn);
         context.insert("default_val", &dv);

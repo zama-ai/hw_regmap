@@ -16,17 +16,18 @@ pub struct Args {
     toml_file: String,
 
     // Output configuration ----------------------------------------------------
-    // Filename of regmap RTL module
-    #[clap(long, value_parser, default_value = "output/regmap.sv")]
-    rtl_module: Option<String>,
+    // Output folder path
+    #[clap(long, value_parser, default_value = "output")]
+    output_path: String,
 
+    // Basename of the generated file
+    #[clap(long, value_parser, default_value = "regmap")]
+    basename: String,
+
+    // TODO add support for xdc/field package generation
     // Filename of regmap field package
     #[clap(long, value_parser, default_value = "output/regmap_field_pkg.sv")]
     rtl_field_pkg: Option<String>,
-
-    // Address of register regmap Tb lookup
-    #[clap(long, value_parser, default_value = "output/regmap_addr_pkg.sv")]
-    rtl_addr_pkg: Option<String>,
 
     // Filename of regmap XDC constraints
     #[clap(long, value_parser, default_value = "output/regmap.sv")]
@@ -66,57 +67,60 @@ fn main() {
     // Analyse all available template
     let tera = Tera::new("templates/**/*").unwrap();
 
+    // Ensure that output folder exist
+    std::fs::create_dir_all(&args.output_path).unwrap();
+
     // Generate module body  ======================================================================
-    if let Some(rtl_module) = args.rtl_module {
-        // Convert regmap in rtl snippets based on Tera
-        let mut regs_sv = Vec::new();
-        regmap.section().iter().for_each(|(sec_name, sec)| {
-            sec.register().iter().for_each(|(reg_name, reg)| {
-                regs_sv.push(generator::SvRegister::from_register(
-                    sec_name, reg_name, reg, &tera,
-                ));
-            })
-        });
+    let rtl_module = format!("{}/{}.sv", args.output_path, args.basename);
 
-        // Expand to rtl module and store in targeted file
-        let mut context = tera::Context::new();
-        // Extract version from env
-        let git_version = option_env!("GIT_VERSION").unwrap_or("unknow");
-        context.insert("tool_version", git_version);
-        context.insert("module_name", &regmap.module_name());
-        context.insert("word_size_b", &regmap.word_size_b());
-        context.insert("offset", &regmap.offset());
-        context.insert("range", &regmap.range());
-        context.insert("regs_sv", &regs_sv);
-        let module_rendered = tera.render("module.sv", &context).unwrap();
-        let module_post_rendered = post_process(&module_rendered);
+    // Convert regmap in rtl snippets based on Tera
+    let mut regs_sv = Vec::new();
+    regmap.section().iter().for_each(|(sec_name, sec)| {
+        sec.register().iter().for_each(|(reg_name, reg)| {
+            regs_sv.push(generator::SvRegister::from_register(
+                sec_name, reg_name, reg, &tera,
+            ));
+        })
+    });
 
-        std::fs::write(rtl_module, module_post_rendered).expect("Unable to write file");
-    }
+    // Expand to rtl module and store in targeted file
+    let mut context = tera::Context::new();
+    // Extract version from env
+    let git_version = option_env!("GIT_VERSION").unwrap_or("unknow");
+    context.insert("tool_version", git_version);
+    context.insert("module_name", &regmap.module_name());
+    context.insert("word_size_b", &regmap.word_size_b());
+    context.insert("offset", &regmap.offset());
+    context.insert("range", &regmap.range());
+    context.insert("regs_sv", &regs_sv);
+    let module_rendered = tera.render("module.sv", &context).unwrap();
+    let module_post_rendered = post_process(&module_rendered);
+
+    std::fs::write(rtl_module, module_post_rendered).expect("Unable to write file");
 
     // Generate addr pkg ==========================================================================
-    if let Some(rtl_addr_pkg) = args.rtl_addr_pkg {
-        // Convert regmap in name->addr map
-        let mut regs_hash = HashMap::new();
-        regmap.section().iter().for_each(|(sec_name, sec)| {
-            sec.register().iter().for_each(|(reg_name, reg)| {
-                let mut cst_name = format!("{sec_name}_{reg_name}_OFS");
-                cst_name.make_ascii_uppercase();
-                regs_hash.insert(cst_name, reg.offset());
-            })
-        });
+    let rtl_addr_pkg = format!("{}/{}_addr_pkg.sv", args.output_path, args.basename);
 
-        // Expand to rtl snippets and store in targeted file
-        let mut context = tera::Context::new();
+    // Convert regmap in name->addr map
+    let mut regs_hash = HashMap::new();
+    regmap.section().iter().for_each(|(sec_name, sec)| {
+        sec.register().iter().for_each(|(reg_name, reg)| {
+            let mut cst_name = format!("{sec_name}_{reg_name}_OFS");
+            cst_name.make_ascii_uppercase();
+            regs_hash.insert(cst_name, reg.offset());
+        })
+    });
 
-        // Extract version from env
-        let git_version = option_env!("GIT_VERSION").unwrap_or("unknow");
-        context.insert("tool_version", git_version);
-        context.insert("module_name", &regmap.module_name());
-        context.insert("regs_hash", &regs_hash);
-        let addr_pkg_rendered = tera.render("regmap_addr_pkg.sv", &context).unwrap();
-        let addr_pkg_post_rendered = post_process(&addr_pkg_rendered);
+    // Expand to rtl snippets and store in targeted file
+    let mut context = tera::Context::new();
 
-        std::fs::write(rtl_addr_pkg, addr_pkg_post_rendered).expect("Unable to write file");
-    }
+    // Extract version from env
+    let git_version = option_env!("GIT_VERSION").unwrap_or("unknow");
+    context.insert("tool_version", git_version);
+    context.insert("module_name", &regmap.module_name());
+    context.insert("regs_hash", &regs_hash);
+    let addr_pkg_rendered = tera.render("regmap_addr_pkg.sv", &context).unwrap();
+    let addr_pkg_post_rendered = post_process(&addr_pkg_rendered);
+
+    std::fs::write(rtl_addr_pkg, addr_pkg_post_rendered).expect("Unable to write file");
 }
