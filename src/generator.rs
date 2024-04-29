@@ -55,6 +55,8 @@ impl SvRegister {
             &matches!(register_props.write_access(), WriteAccess::WriteNotify),
         );
 
+        context.insert("have_fields", &register_props.field().is_some());
+
         // Render Param section
         let param_snippets = match register_props.owner() {
             Owner::Parameter => tera.render("module/param.sv", &context).unwrap(),
