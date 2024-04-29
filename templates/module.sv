@@ -4,7 +4,6 @@
 //  * Date:  {{ now() | date(format="%Y-%m-%d") }}
 //  * Tool_version: {{ tool_version }}
 // ---------------------------------------------------------------------------------------------- //
-// TODO update naming definition
 // xR[n]W[na]
 // |-> who is in charge of the register update logic : u -> User
 //                                                   : k -> Kernel (have a _upd signal)
@@ -16,21 +15,21 @@
 //      | [a] optional generate wr notification (have a _wr_en & _wdata)
 // 
 // Thus following type of registers:
-// uR.W.: Read-write                                              
+// uRW  : Read-write                                              
 //      : Value provided by the host. The host can read it and write it.
-// u__W.: Write-only                                              
+// uW   : Write-only                                              
 //      : Value provided by the host. The host can only write it.
-// u__Wn: Write-only with notification                            
+// uWn  : Write-only with notification                            
 //      : Value provided by the host. The host can only write it.
-// kR.__: Read-only register                                      
+// kR   : Read-only register                                      
 //      : Value provided by the RTL.
-// kRn__: Read-only register with notification  (rd)              
+// kRn  : Read-only register with notification  (rd)              
 //      : Value provided by the RTL.
-// bR.W.: Read-write register                                     
+// bR W : Read-write register                                     
 //      : Both the host and the RTL can modify the value. The host can read it and write it.
 // bRnWn: Read-write register with notification (rd/wr)           
 //      : Both the host and the RTL can modify the value. The host can read it and write it.
-// kR.Wa: Read-only register with notification (wr) and action    
+// kRWa : Read-only register with notification (wr) and action    
 //      : Value provided by the RTL. The host can read it. The write data is processed by the RTL.
 // kRnWa: Read-only register with notification (rd/wr) and action 
 //      : Value provided by the RTL. The host can read it with notify. The write data is processed by the RTL.
@@ -40,7 +39,7 @@ module {{module_name}}
 {%for pkg in ext_pkg%}
 import {{pkg}}::*;
 {%endfor%}
-import {{module_name}}_addr_pkg::*;
+import {{module_name}}_pkg::*;
 {% raw %}#({% endraw %}
   localparam int REG_DATA_W = {{word_size_b}},
   localparam int AXI4L_ADD_OFS = {{offset}},

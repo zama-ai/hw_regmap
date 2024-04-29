@@ -23,7 +23,7 @@ impl SvRegister {
     ) -> Self {
         let mut context = tera::Context::new();
         let full_name = format!("{section_name}_{register_name}");
-        let mut cst_name = format!("{section_name}_{register_name}_OFS");
+        let mut cst_name = format!("{section_name}_{register_name}_REG_OFS");
         cst_name.make_ascii_uppercase();
         context.insert("name", &full_name);
         context.insert("offset_cst_name", &cst_name);

@@ -90,16 +90,28 @@ fn main() {
 
     std::fs::write(rtl_module, module_post_rendered).expect("Unable to write file");
 
-    // Generate addr pkg ==========================================================================
-    let rtl_addr_pkg = format!("{}/{}_addr_pkg.sv", args.output_path, args.basename);
+    // Generate addr/field pkg ===================================================================
+    let rtl_addr_pkg = format!("{}/{}_pkg.sv", args.output_path, args.basename);
 
     // Convert regmap in name->addr map
     let mut regs_hash = HashMap::new();
     regmap.section().iter().for_each(|(sec_name, sec)| {
         sec.register().iter().for_each(|(reg_name, reg)| {
-            let mut cst_name = format!("{sec_name}_{reg_name}_OFS");
-            cst_name.make_ascii_uppercase();
-            regs_hash.insert(cst_name, reg.offset());
+            let mut ofs_name = format!("{sec_name}_{reg_name}_REG_OFS");
+            ofs_name.make_ascii_uppercase();
+            regs_hash.insert(ofs_name, reg.offset());
+            if let Some(fields) = reg.field() {
+                fields.iter().for_each(|(field_name, field)| {
+                    // Generate Offset and Width constant for each fields
+                    let mut ofs_name = format!("{sec_name}_{reg_name}_{field_name}_FIELD_OFS");
+                    ofs_name.make_ascii_uppercase();
+                    regs_hash.insert(ofs_name, field.offset_b());
+
+                    let mut width_name = format!("{sec_name}_{reg_name}_{field_name}_FIELD_W");
+                    width_name.make_ascii_uppercase();
+                    regs_hash.insert(width_name, field.size_b());
+                });
+            }
         })
     });
 
@@ -111,7 +123,7 @@ fn main() {
     context.insert("tool_version", git_version);
     context.insert("module_name", &regmap.module_name());
     context.insert("regs_hash", &regs_hash);
-    let addr_pkg_rendered = tera.render("regmap_addr_pkg.sv", &context).unwrap();
+    let addr_pkg_rendered = tera.render("regmap_pkg.sv", &context).unwrap();
     let addr_pkg_post_rendered = post_process(&addr_pkg_rendered);
 
     std::fs::write(rtl_addr_pkg, addr_pkg_post_rendered).expect("Unable to write file");
