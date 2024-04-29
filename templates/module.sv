@@ -36,12 +36,15 @@
 //      : Value provided by the RTL. The host can read it with notify. The write data is processed by the RTL.
 // ============================================================================================== //
 
-module {{module_name}} {% raw %}#({% endraw %}
-  parameter int REG_DATA_W = {{word_size_b}},
-  parameter int AXI4L_ADD_OFS = {{offset}},
-  parameter int AXI4L_ADD_RANGE= {{range}},
-  parameter int AXI4L_ADD_W,
-  parameter int AXI4L_DATA_W
+module {{module_name}} 
+{%for pkg in ext_pkg%}
+import {{pkg}}::*;
+{%endfor%}
+import {{module_name}}_addr_pkg::*;
+{% raw %}#({% endraw %}
+  localparam int REG_DATA_W = {{word_size_b}},
+  localparam int AXI4L_ADD_OFS = {{offset}},
+  localparam int AXI4L_ADD_RANGE= {{range}},
   {%- for reg in regs_sv -%}
   {%- if reg.param_snippets != "" -%}
   {{reg.param_snippets}}

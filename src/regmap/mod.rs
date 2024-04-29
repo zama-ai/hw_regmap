@@ -434,6 +434,7 @@ pub struct Regmap {
     description: String,
     word_size_b: usize,
     offset: usize,
+    ext_pkg: Vec<String>,
     range: usize,
     section: IndexMap<String, Section>,
 }
@@ -452,6 +453,7 @@ impl Regmap {
             module_name: regmap.module_name,
             description: regmap.description,
             word_size_b: regmap.word_size_b,
+            ext_pkg: regmap.ext_pkg,
             offset,
             range,
             section,
@@ -467,6 +469,7 @@ impl std::fmt::Display for Regmap {
             "offset: 0x{:x}, word_size_b: {:?}",
             self.offset, self.word_size_b
         )?;
+        writeln!(f, "External package: {:?}", self.ext_pkg)?;
         write!(f, "Section: [")?;
         for (name, sec) in self.section.iter() {
             write!(f, "\n{}: [\n", name)?;

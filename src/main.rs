@@ -24,15 +24,6 @@ pub struct Args {
     #[clap(long, value_parser, default_value = "regmap")]
     basename: String,
 
-    // TODO add support for xdc/field package generation
-    // Filename of regmap field package
-    #[clap(long, value_parser, default_value = "output/regmap_field_pkg.sv")]
-    rtl_field_pkg: Option<String>,
-
-    // Filename of regmap XDC constraints
-    #[clap(long, value_parser, default_value = "output/regmap.sv")]
-    xdc_ctrs: Option<String>,
-
     // Debug options ----------------------------------------------------------
     /// Enable verbosity
     #[clap(long, value_parser)]
@@ -91,6 +82,7 @@ fn main() {
     context.insert("module_name", &regmap.module_name());
     context.insert("word_size_b", &regmap.word_size_b());
     context.insert("offset", &regmap.offset());
+    context.insert("ext_pkg", &regmap.ext_pkg());
     context.insert("range", &regmap.range());
     context.insert("regs_sv", &regs_sv);
     let module_rendered = tera.render("module.sv", &context).unwrap();
