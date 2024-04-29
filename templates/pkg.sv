@@ -9,7 +9,10 @@
 // ============================================================================================== //
 
 package {{module_name}}_pkg;
-  {% for cst_name, value in regs_hash %}
-  parameter int {{cst_name}} = {{value}};
-  {% endfor %}
+  {%- for  reg in regs_pkg_sv-%}
+  {{reg.struct_snippets}}
+  {{reg.addr_snippets}}
+
+
+  {%- endfor -%}
 endpackage

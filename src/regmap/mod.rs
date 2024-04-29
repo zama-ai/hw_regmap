@@ -4,6 +4,7 @@ use indexmap::{map::Iter, IndexMap};
 
 use getset::Getters;
 use parser::{Owner, ReadAccess, WriteAccess};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 /// Default parsing error
@@ -25,7 +26,7 @@ pub enum DefaultError {
     Override(String),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Default {
     Val(usize),
     Param(String),
@@ -50,7 +51,7 @@ pub enum FieldError {
     WordBoundary(parser::FieldOpt),
 }
 
-#[derive(Debug, Clone, Getters)]
+#[derive(Debug, Clone, Getters, Serialize, Deserialize)]
 #[getset(get = "pub")]
 pub struct Field {
     description: String,
@@ -220,7 +221,11 @@ impl Register {
 
             // Expand inner
             let expand_field = match register.field.as_ref() {
-                Some(fields) => Some(Field::from_opt(&mut fields.iter(), word_size)?),
+                Some(fields) => {
+                    let mut concrete_fields = Field::from_opt(&mut fields.iter(), word_size)?;
+                    concrete_fields.sort_by(|_xk, x, _yx, y| x.offset_b.cmp(&y.offset_b));
+                    Some(concrete_fields)
+                }
                 None => None,
             };
 

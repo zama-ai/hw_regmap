@@ -84,3 +84,75 @@ impl SvRegister {
         }
     }
 }
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct SvRegisterPkg {
+    name: String,
+    description: String,
+    addr_snippets: String,
+    struct_snippets: String,
+}
+
+impl SvRegisterPkg {
+    pub fn from_register(
+        section_name: &str,
+        register_name: &str,
+        register_w: &usize,
+        register_props: &Register,
+        tera: &Tera,
+    ) -> Self {
+        let mut context = tera::Context::new();
+        let base_name = format!("{section_name}_{register_name}");
+        let mut ofs_name = format!("{base_name}_REG_OFS");
+        ofs_name.make_ascii_uppercase();
+        context.insert("base_name", &base_name);
+        context.insert("ofs_name", &ofs_name);
+        context.insert("ofs_val", &register_props.offset());
+
+        if let Some(fields) = register_props.field() {
+            // Sanitize fields -> insert padding if necessary
+            let mut cur_ofs = 0;
+            let mut padded_fields = Vec::new();
+            for (k, v) in fields {
+                if cur_ofs != *v.offset_b() {
+                    padded_fields.push((
+                        format!("padding_{cur_ofs}"),
+                        cur_ofs,
+                        (v.offset_b() - cur_ofs),
+                    ));
+                }
+                padded_fields.push((k.clone(), *v.offset_b(), *v.size_b()));
+                cur_ofs = v.offset_b() + v.size_b();
+            }
+            if cur_ofs != *register_w {
+                padded_fields.push((
+                    format!("padding_{cur_ofs}"),
+                    cur_ofs,
+                    (register_w - cur_ofs),
+                ));
+            }
+            // NB: SystemVerilog struct are defined from MSB word to LSB word
+            padded_fields.reverse();
+            context.insert("fields_nos", &padded_fields);
+        }
+
+        // Render addr section
+        context.insert("ofs_name", &ofs_name);
+        context.insert("ofs_val", &register_props.offset());
+        let addr_snippets = tera.render("pkg/addr.sv", &context).unwrap();
+
+        // Render struct section
+        let struct_snippets = if let Some(fields) = register_props.field() {
+            tera.render("pkg/struct.sv", &context).unwrap()
+        } else {
+            String::new()
+        };
+
+        Self {
+            name: base_name,
+            description: register_props.description().clone(),
+            addr_snippets,
+            struct_snippets,
+        }
+    }
+}
