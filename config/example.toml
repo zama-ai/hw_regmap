@@ -17,7 +17,7 @@ align_offset=true
   default_val=0x00
   owner="User"
   read_access="Read"
-  write_access="None"
+  write_access="Write"
 
 # =====================================================================================================================
 [section.Info]
@@ -140,17 +140,13 @@ align_offset=true
   read_access="Read"
   write_access="WriteAction"
 
-[section.WorkAck.register.ackq_cmd]
+[section.WorkAck.register.ackq]
   description="Pop ack from in ackq"
   owner="Kernel"
-  read_access="Read"
+  read_access="ReadNotify"
   write_access="None"
-
-[section.WorkAck.register.ackq_status]
-  description="Status of ackq"
-  owner="Kernel"
-  read_access="Read"
-  write_access="None"
+  field.bsk_pc     = { size_b=8, offset_b=0 , default=0, description="Bsk pc"}
+  field.bsk_cut_nb = { size_b=8, offset_b=8 , default=0, description="Bsk cut nb"}
 
 # =====================================================================================================================
 [section.Stats]

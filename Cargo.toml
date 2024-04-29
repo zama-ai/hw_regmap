@@ -16,6 +16,3 @@ getset = "0.1.2"
 tera = "1.0"
 regex = "1.10.4"
 
-[[bin]]
-name = "tera"
-path = "src/tera.rs"
