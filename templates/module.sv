@@ -43,7 +43,7 @@ import {{module_name}}_pkg::*;
 {% raw %}#({% endraw %}
   localparam int REG_DATA_W = {{word_size_b}},
   localparam int AXI4L_ADD_OFS = {{offset}},
-  localparam int AXI4L_ADD_RANGE= {{range}},
+  localparam int AXI4L_ADD_RANGE= {{range}}
   {%- for reg in regs_sv -%}
   {%- if reg.param_snippets != "" -%}
   {{reg.param_snippets}}
@@ -73,12 +73,6 @@ import {{module_name}}_pkg::*;
   {%- if reg.io_snippets != "" -%}{{reg.io_snippets}}{%- endif -%}
   {%- endfor -%}
 );
-
-// ============================================================================================== --
-// Common package
-// ============================================================================================== --
-import axi_if_common_param_pkg::*;
-import {{module_name}}_addr_pkg::*;
 
 // ============================================================================================== --
 // Axi4l management
