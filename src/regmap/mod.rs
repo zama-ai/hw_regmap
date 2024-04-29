@@ -202,15 +202,14 @@ impl Register {
                     return Err(RegisterError::UserAccess(register.clone()).into())
                 }
                 (Owner::User, _rd, _wr) => {}
-                (Owner::Kernel, _rd, WriteAccess::WriteAction)
-                | (Owner::Kernel, _rd, WriteAccess::None) => {}
-                (Owner::Kernel, _rd, _wr) => {
+                (Owner::Kernel, _rd, WriteAccess::Write) => {
                     return Err(RegisterError::KernelAccess(register.clone()).into())
                 }
-                (Owner::Both, _rd, WriteAccess::WriteAction) => {}
-                (Owner::Both, _rd, _wr) => {
+                (Owner::Kernel, _rd, _wr) => {}
+                (Owner::Both, _rd, WriteAccess::None) => {
                     return Err(RegisterError::BothAccess(register.clone()).into())
                 }
+                (Owner::Both, _rd, _wr) => {}
             }
 
             // Check correctness of offset

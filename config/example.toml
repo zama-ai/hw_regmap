@@ -4,6 +4,7 @@ module_name="hpu_regif"
 description="Hpu top-level register interface. Used by the host to retrieved RTL information, configure it and issue commands."
 word_size_b = 32
 offset = 0x00
+ext_pkg = ["axi_if_common_param_pkg", "axi_if_shell_axil_pkg"]
 
 # =====================================================================================================================
 [section.Xrt]
@@ -124,9 +125,9 @@ duplicate=["_Bsk", "_Ksk"]
 
 [section.Keys.register.reset]
   description="Key reset sequence"
-  owner="Kernel"
+  owner="Both"
   read_access="Read"
-  write_access="WriteAction"
+  write_access="Write"
 
 # =====================================================================================================================
 [section.WorkAck]
