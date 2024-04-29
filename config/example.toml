@@ -139,7 +139,7 @@ align_offset=true
   description="Insert work in workq and read status"
   owner="Kernel"
   read_access="Read"
-  write_access="WriteAction"
+  write_access="WriteNotify"
 
 [section.WorkAck.register.ackq]
   description="Pop ack from in ackq"

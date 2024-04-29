@@ -21,11 +21,6 @@
   assign r_{{name}}_wr_enD = wr_en && (wr_add == {{ offset_cst_name }});
   {% endif %}
 
-  {% if wr_action %}
-  logic [REG_DATA_W-1:0] r_{{name}}_wdataD;
-  assign r_{{name}}_wdataD = wr_data;
-  {% endif %}
-
   {% if rd_notify %}
   logic r_{{name}}_rd_enD;
   assign r_{{name}}_rd_enD = rd_en && (rd_add == {{ offset_cst_name }});
@@ -35,13 +30,11 @@
     if (!s_rst_n) begin
       r_{{name}}       <= {{ default_val }};
       {% if wr_notify     %}r_{{name}}_wr_en <= 1'b0;         {% endif %}
-      {% if wr_action     %}r_{{name}}_wdata <=  'h0;         {% endif %}
       {% if rd_notify     %}r_{{name}}_rd_en <= 1'b0;         {% endif %}
     end
     else begin
       r_{{name}}       <= r_{{name}}D;
       {% if wr_notify     %}r_{{name}}_wr_en <= r_{{name}}_wr_enD; {% endif %}
-      {% if wr_action     %}r_{{name}}_wdata <= r_{{name}}_wdataD; {% endif %}
       {% if rd_notify     %}r_{{name}}_rd_en <= r_{{name}}_rd_enD; {% endif %}
     end
   end

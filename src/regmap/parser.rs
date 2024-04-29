@@ -30,7 +30,6 @@ pub enum WriteAccess {
     None,
     Write,
     WriteNotify,
-    WriteAction,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

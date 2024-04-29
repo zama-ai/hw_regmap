@@ -52,14 +52,7 @@ impl SvRegister {
         );
         context.insert(
             "wr_notify",
-            &matches!(
-                register_props.write_access(),
-                WriteAccess::WriteNotify | WriteAccess::WriteAction
-            ),
-        );
-        context.insert(
-            "wr_action",
-            &matches!(register_props.write_access(), WriteAccess::WriteAction),
+            &matches!(register_props.write_access(), WriteAccess::WriteNotify),
         );
 
         // Render Param section

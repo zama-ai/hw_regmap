@@ -25,13 +25,13 @@
 //      : Value provided by the RTL.
 // kRn  : Read-only register with notification  (rd)              
 //      : Value provided by the RTL.
-// bR W : Read-write register                                     
+// bRW  : Read-write register                                     
 //      : Both the host and the RTL can modify the value. The host can read it and write it.
 // bRnWn: Read-write register with notification (rd/wr)           
 //      : Both the host and the RTL can modify the value. The host can read it and write it.
-// kRWa : Read-only register with notification (wr) and action    
+// kRWn : Read-only register with notification (wr)
 //      : Value provided by the RTL. The host can read it. The write data is processed by the RTL.
-// kRnWa: Read-only register with notification (rd/wr) and action 
+// kRnWn: Read-only register with notification (rd/wr)
 //      : Value provided by the RTL. The host can read it with notify. The write data is processed by the RTL.
 // ============================================================================================== //
 
@@ -68,7 +68,10 @@ import {{module_name}}_pkg::*;
   output logic [AXI4L_DATA_W-1:0]        s_axi4l_rdata,
   output logic [1:0]                     s_axi4l_rresp,
   output logic                           s_axi4l_rvalid,
-  input  logic                           s_axi4l_rready
+  input  logic                           s_axi4l_rready,
+  // Registered version of wdata
+  output logic [AXI4L_DATA_W-1:0]        wr_data
+
   {%- for reg in regs_sv -%}
   {%- if reg.io_snippets != "" -%}{{reg.io_snippets}}{%- endif -%}
   {%- endfor -%}

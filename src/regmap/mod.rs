@@ -198,9 +198,6 @@ impl Register {
                 (Owner::Parameter, _rd, _wr) => {
                     return Err(RegisterError::ParameterAccess(register.clone()).into())
                 }
-                (Owner::User, _rd, WriteAccess::WriteAction) => {
-                    return Err(RegisterError::UserAccess(register.clone()).into())
-                }
                 (Owner::User, _rd, _wr) => {}
                 (Owner::Kernel, _rd, WriteAccess::Write) => {
                     return Err(RegisterError::KernelAccess(register.clone()).into())
