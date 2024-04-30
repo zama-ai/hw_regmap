@@ -54,7 +54,7 @@ fn main() {
 
     // Create a new Tera instance
     // Analyse all available template
-    let tera = Tera::new("templates/**/*").unwrap();
+    let tera = Tera::new("templates/**/*.sv").unwrap();
 
     // Ensure that output folder exist
     std::fs::create_dir_all(&args.output_path).unwrap();
