@@ -36,12 +36,12 @@ import {{pkg}}::*;
 {%endfor%}
 import {{module_name}}_pkg::*;
 {% raw %}#({% endraw %}
-  localparam int REG_DATA_W = {{word_size_b}},
-  localparam int AXI4L_ADD_OFS = {{offset}},
-  localparam int AXI4L_ADD_RANGE= {{range}}
+  {%- set_global put_comma = 0 -%}
   {%- for reg in regs_sv -%}
   {%- if reg.param_snippets != "" -%}
+  {%- if put_comma > 0 %},{% endif -%}
   {{reg.param_snippets}}
+  {%- set_global put_comma = 1 -%}
   {%- endif -%}
   {%- endfor -%})(
   input  logic                           clk,
@@ -71,6 +71,12 @@ import {{module_name}}_pkg::*;
   {%- if reg.io_snippets != "" -%}{{reg.io_snippets}}{%- endif -%}
   {%- endfor -%}
 );
+
+// ============================================================================================== --
+// localparam
+// ============================================================================================== --
+  localparam int AXI4L_ADD_OFS = {{offset}};
+  localparam int AXI4L_ADD_RANGE= {{range}};
 
 // ============================================================================================== --
 // Axi4l management
