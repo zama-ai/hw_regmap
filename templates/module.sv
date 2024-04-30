@@ -70,7 +70,7 @@ import {{module_name}}_pkg::*;
   output logic                           s_axi4l_rvalid,
   input  logic                           s_axi4l_rready,
   // Registered version of wdata
-  output logic [AXI4L_DATA_W-1:0]        r_axi4_wdata
+  output logic [AXI4L_DATA_W-1:0]        r_axi4l_wdata
 
   {%- for reg in regs_sv -%}
   {%- if reg.io_snippets != "" -%}{{reg.io_snippets}}{%- endif -%}

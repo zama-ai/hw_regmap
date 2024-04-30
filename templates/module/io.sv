@@ -3,14 +3,14 @@
     {%- if not param_reg %}  // Register IO: {{name}}                                {% endif %}
     {%  if not param_reg -%}
         {%  if have_fields -%}
-        , output struct {{name}}_t r_{{name}}       
+        , output {{name}}_t r_{{name}}       
         {% else -%}
         , output logic [REG_DATA_W-1: 0] r_{{name}}       
         {% endif -%}
     {% endif -%}
     {%  if reg_update -%}
         {%  if have_fields -%}
-        , input struct {{name}}_t r_{{name}}_upd 
+        , input {{name}}_t r_{{name}}_upd 
         {% else -%}
         , input  logic [REG_DATA_W-1: 0] r_{{name}}_upd
         {% endif -%}
