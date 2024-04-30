@@ -161,8 +161,8 @@ impl std::fmt::Display for Field {
 pub enum RegisterError {
     #[error("Incompatible Access right for Parameter:\n  => {self:?}")]
     ParameterAccess(parser::RegisterOpt),
-    #[error("Incompatible Access right for User:\n  => {self:?}")]
-    UserAccess(parser::RegisterOpt),
+    // #[error("Incompatible Access right for User:\n  => {self:?}")]
+    // UserAccess(parser::RegisterOpt),
     #[error("Incompatible Access right for Kernel:\n  => {self:?}")]
     KernelAccess(parser::RegisterOpt),
     #[error("Incompatible Access right for Both:\n  => {self:?}")]

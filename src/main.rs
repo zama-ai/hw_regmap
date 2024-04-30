@@ -1,8 +1,6 @@
 mod generator;
 mod regmap;
 
-use std::collections::HashMap;
-
 use regex::Regex;
 use tera::Tera;
 

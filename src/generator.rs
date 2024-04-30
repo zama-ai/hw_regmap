@@ -144,7 +144,7 @@ impl SvRegisterPkg {
         let addr_snippets = tera.render("pkg/addr.sv", &context).unwrap();
 
         // Render struct section
-        let struct_snippets = if let Some(fields) = register_props.field() {
+        let struct_snippets = if register_props.field().is_some() {
             tera.render("pkg/struct.sv", &context).unwrap()
         } else {
             String::new()
