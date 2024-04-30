@@ -70,7 +70,7 @@ import {{module_name}}_pkg::*;
   output logic                           s_axi4l_rvalid,
   input  logic                           s_axi4l_rready,
   // Registered version of wdata
-  output logic [AXI4L_DATA_W-1:0]        wr_data
+  output logic [AXI4L_DATA_W-1:0]        r_axi4_wdata
 
   {%- for reg in regs_sv -%}
   {%- if reg.io_snippets != "" -%}{{reg.io_snippets}}{%- endif -%}
@@ -193,6 +193,7 @@ import {{module_name}}_pkg::*;
   assign s_axi4l_rresp   = axi4l_rresp;
   assign s_axi4l_rdata   = axi4l_rdata;
   assign s_axi4l_rvalid  = axi4l_rvalid;
+  assign r_axi4_wdata    = wr_data;
 
 // ============================================================================================== --
 // Write reg
