@@ -125,9 +125,9 @@ duplicate=["_Bsk", "_Ksk"]
 
 [section.Keys.register.reset]
   description="Key reset sequence"
-  owner="Both"
+  owner="Kernel"
   read_access="Read"
-  write_access="Write"
+  write_access="WriteNotify"
 
 # =====================================================================================================================
 [section.WorkAck]

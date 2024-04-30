@@ -14,7 +14,6 @@ use std::fs;
 pub enum Owner {
     User,
     Kernel,
-    Both,
     Parameter,
 }
 

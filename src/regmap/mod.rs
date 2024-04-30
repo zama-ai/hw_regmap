@@ -165,8 +165,6 @@ pub enum RegisterError {
     // UserAccess(parser::RegisterOpt),
     #[error("Incompatible Access right for Kernel:\n  => {self:?}")]
     KernelAccess(parser::RegisterOpt),
-    #[error("Incompatible Access right for Both:\n  => {self:?}")]
-    BothAccess(parser::RegisterOpt),
     #[error("Invalid offset:\n  => {self:?}")]
     Offset(parser::RegisterOpt),
 }
@@ -204,10 +202,6 @@ impl Register {
                     return Err(RegisterError::KernelAccess(register.clone()).into())
                 }
                 (Owner::Kernel, _rd, _wr) => {}
-                (Owner::Both, _rd, WriteAccess::None) => {
-                    return Err(RegisterError::BothAccess(register.clone()).into())
-                }
-                (Owner::Both, _rd, _wr) => {}
             }
 
             // Check correctness of offset

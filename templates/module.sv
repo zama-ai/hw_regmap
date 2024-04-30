@@ -7,12 +7,11 @@
 // xR[n]W[na]
 // |-> who is in charge of the register update logic : u -> User
 //                                                   : k -> Kernel (have a _upd signal)
-//                                                   : b -> Both
+//                                                   : p -> Parameters (i.e. constant register)
 //  | Read options
 //  | [n] optional generate read notification (have a _rd_en)
-//      | Write options
-//      | [n] optional generate wr notification (have a _wr_en)
-//      | [a] optional generate wr notification (have a _wr_en & _wdata)
+//  | Write options
+//  | [n] optional generate wr notification (have a _wr_en)
 // 
 // Thus following type of registers:
 // uRW  : Read-write                                              
@@ -25,10 +24,6 @@
 //      : Value provided by the RTL.
 // kRn  : Read-only register with notification  (rd)              
 //      : Value provided by the RTL.
-// bRW  : Read-write register                                     
-//      : Both the host and the RTL can modify the value. The host can read it and write it.
-// bRnWn: Read-write register with notification (rd/wr)           
-//      : Both the host and the RTL can modify the value. The host can read it and write it.
 // kRWn : Read-only register with notification (wr)
 //      : Value provided by the RTL. The host can read it. The write data is processed by the RTL.
 // kRnWn: Read-only register with notification (rd/wr)

@@ -37,12 +37,12 @@ impl SvRegister {
         );
         context.insert(
             "reg_update",
-            &matches!(register_props.owner(), Owner::Kernel | Owner::Both),
+            &matches!(register_props.owner(), Owner::Kernel),
         );
         context.insert(
             "wr_user",
             &match register_props.owner() {
-                Owner::User | Owner::Both => register_props.write_access() != &WriteAccess::None,
+                Owner::User => register_props.write_access() != &WriteAccess::None,
                 _ => false,
             },
         );
