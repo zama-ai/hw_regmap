@@ -194,7 +194,7 @@ import {{module_name}}_pkg::*;
   assign s_axi4l_rresp   = axi4l_rresp;
   assign s_axi4l_rdata   = axi4l_rdata;
   assign s_axi4l_rvalid  = axi4l_rvalid;
-  assign r_axi4_wdata    = wr_data;
+  assign r_axi4l_wdata    = wr_data;
 
 // ============================================================================================== --
 // Write reg
