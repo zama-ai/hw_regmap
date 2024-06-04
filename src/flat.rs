@@ -2,8 +2,11 @@
 //! Provide a flatten view of register map
 //! Usefull on the Sw side to easily access register with offset and decription
 
+use getset::Getters;
 use std::collections::HashMap;
 
+#[derive(Getters)]
+#[getset(get = "pub")]
 pub struct FlatField {
     name: String,
     description: String,
@@ -38,6 +41,8 @@ impl std::fmt::Display for Access {
     }
 }
 
+#[derive(Getters)]
+#[getset(get = "pub")]
 pub struct FlatRegister {
     // Section info
     sec_name: String,
@@ -66,7 +71,7 @@ impl std::fmt::Display for FlatRegister {
 }
 
 impl FlatRegister {
-    pub fn as_fields(&self, value: u32) -> HashMap<String, u32> {
+    pub fn as_field(&self, value: u32) -> HashMap<String, u32> {
         self.field
             .iter()
             .map(
@@ -84,6 +89,8 @@ impl FlatRegister {
     }
 }
 
+#[derive(Getters)]
+#[getset(get = "pub")]
 pub struct FlatRegmap {
     register: HashMap<String, FlatRegister>,
 }
