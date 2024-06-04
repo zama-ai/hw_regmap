@@ -1,5 +1,5 @@
-mod generator;
-mod regmap;
+use hw_regmap::generator;
+use hw_regmap::regmap;
 
 use regex::Regex;
 use tera::Tera;

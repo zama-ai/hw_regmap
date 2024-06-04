@@ -24,11 +24,29 @@ pub enum ReadAccess {
     ReadNotify,
 }
 
+impl ReadAccess {
+    pub fn is_read(&self) -> bool {
+        match self {
+            Self::None => false,
+            Self::Read | Self::ReadNotify => true,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 pub enum WriteAccess {
     None,
     Write,
     WriteNotify,
+}
+
+impl WriteAccess {
+    pub fn is_write(&self) -> bool {
+        match self {
+            Self::None => false,
+            Self::Write | Self::WriteNotify => true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
