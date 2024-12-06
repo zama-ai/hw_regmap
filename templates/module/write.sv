@@ -22,20 +22,19 @@
   {% endif %}
 
   {% if rd_notify %}
-  logic r_{{name}}_rd_enD;
-  assign r_{{name}}_rd_enD = rd_en && (rd_add == {{ offset_cst_name }});
-  {% endif %}
-
+  assign r_{{name}}_rd_en = rd_en && (rd_add == {{ offset_cst_name }});
+  assign r_{{name}} = r_{{name}}_upd;
+  {% else %}
   always_ff @(posedge clk) begin
     if (!s_rst_n) begin
       r_{{name}}       <= {{ default_val }};
-      {% if wr_notify     %}r_{{name}}_wr_en <= 1'b0;         {% endif %}
-      {% if rd_notify     %}r_{{name}}_rd_en <= 1'b0;         {% endif %}
+      {% if wr_notify %}r_{{name}}_wr_en <= 1'b0;{% endif %}
     end
     else begin
       r_{{name}}       <= r_{{name}}D;
-      {% if wr_notify     %}r_{{name}}_wr_en <= r_{{name}}_wr_enD; {% endif %}
-      {% if rd_notify     %}r_{{name}}_rd_en <= r_{{name}}_rd_enD; {% endif %}
+      {% if wr_notify %}r_{{name}}_wr_en <= r_{{name}}_wr_enD;{% endif %}
     end
   end
+  {% endif %}
+
 {%- endif -%}
