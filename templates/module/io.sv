@@ -1,6 +1,6 @@
 {# Template for generating RTL input/output #}
 {# Warn: Keep indentation in phase with module template (cf. io_snippets) #}
-    {%- if not param_reg %}  // Register IO: {{name}}                                {% endif %}
+    {%- if not param_reg %}  // Register IO: {{name}}{% endif %}
     {%  if not param_reg -%}
         {%  if have_fields -%}
         , output {{name}}_t r_{{name}}
