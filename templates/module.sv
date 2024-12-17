@@ -30,7 +30,7 @@
 //      : Value provided by the RTL. The host can read it with notify. The write data is processed by the RTL.
 // ============================================================================================== //
 
-module {{module_name}} 
+module {{module_name}}
 {%for pkg in ext_pkg%}
 import {{pkg}}::*;
 {%endfor%}

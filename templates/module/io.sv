@@ -3,9 +3,9 @@
     {%- if not param_reg %}  // Register IO: {{name}}                                {% endif %}
     {%  if not param_reg -%}
         {%  if have_fields -%}
-        , output {{name}}_t r_{{name}}       
+        , output {{name}}_t r_{{name}}
         {% else -%}
-        , output logic [REG_DATA_W-1: 0] r_{{name}}       
+        , output logic [REG_DATA_W-1: 0] r_{{name}}
         {% endif -%}
     {% endif -%}
     {%  if reg_update -%}

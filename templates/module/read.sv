@@ -1,5 +1,5 @@
-{# Template for generating subcase part for read section #}          
-{# Warn: Keep indentation in phase with module template (cf. rd_snippets) #}          
+{# Template for generating subcase part for read section #}
+{# Warn: Keep indentation in phase with module template (cf. rd_snippets) #}
           {{ offset_cst_name }}: begin // register {{ name }}
             axi4l_rrespD = AXI4_OKAY;
             {% if param_reg %}

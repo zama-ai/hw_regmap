@@ -1,5 +1,5 @@
-{# Template for generating storage and update logic #}          
-{# Warn: Keep indentation in phase with module template (cf. ff_wr_snippets) #}          
+{# Template for generating storage and update logic #}
+{# Warn: Keep indentation in phase with module template (cf. ff_wr_snippets) #}
 {%- if not param_reg -%}
   // Register FF: {{name}}
   logic [REG_DATA_W-1:0] r_{{name}}D;
