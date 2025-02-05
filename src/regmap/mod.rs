@@ -7,6 +7,48 @@ use parser::{Owner, ReadAccess, WriteAccess};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+/// Global parsing error
+/// Descibe potential register error and imcompatible options
+#[derive(Error, Debug, Clone)]
+pub enum RegmapError {
+    #[error("Field definition crossed word-boundary:[ Word width (bits): {word_b}, Field [offset {field_offset}, width {field_b}]]\n  => {msg_info}")]
+    WordBoundary {
+        word_b: usize,
+        field_offset: usize,
+        field_b: usize,
+        msg_info: String,
+    },
+    #[error("Incompatible Access right for {owner:?} [rd: {rd:?}, wr: {wr:?}]:\n  => {msg_info}")]
+    Access {
+        owner: Owner,
+        rd: ReadAccess,
+        wr: WriteAccess,
+        msg_info: String,
+    },
+    #[error(
+        "Invalid offset: [Minimal offset: 0x{min_offset:x}, Requested offset: 0x{request_offset:x}]\n  => {msg_info:?}"
+    )]
+    Offset {
+        min_offset: usize,
+        request_offset: usize,
+        msg_info: String,
+    },
+    #[error(
+        "Invalid range: [Real range: 0x{real_range:x}, Requested range: 0x{request_range:x}]\n  => {msg_info}"
+    )]
+    Range {
+        real_range: usize,
+        request_range: usize,
+        msg_info: String,
+    },
+    #[error("Invalid alignement:[Word alignement: 0x{word_align}, Requested alignement: 0x{request_align}]\n  => {msg_info}")]
+    ByteAlign {
+        word_align: usize,
+        request_align: usize,
+        msg_info: String,
+    },
+}
+
 /// Default parsing error
 /// Descibe potential default val/param imcompatible options
 #[derive(Error, Debug, Clone)]
@@ -26,29 +68,43 @@ pub enum DefaultError {
     Override(String),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Default {
-    Val(usize),
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+pub enum DefaultVal {
+    /// Hardcoded value
+    Cst(usize),
+    /// Value extract from a Rtl parameters
     Param(String),
-    ParamField { name: Vec<String>, value: String },
+    /// Value construct from a list of parameters
+    ///  * name field: contains the list of used parameters
+    ///  * formula: contains the aggregation formula
+    /// i.e. you want to build you constant from two parameters ParamA, ParamB. 16Msb for paramA, 16Lsb with ParamB
+    /// -> name = vec!["ParamA", "ParamB"]
+    /// -> formula = "ParamA << 16 + (ParamB &0xffff)
+    ParamsField {
+        params: Vec<String>,
+        formula: String,
+    },
 }
 
-impl Default {
+impl DefaultVal {
     pub fn to_sv_namesval(&self) -> (Vec<String>, String) {
         match self {
-            Self::Val(val) => (vec![], format!("'h{:x}", val)),
+            Self::Cst(val) => (vec![], format!("'h{:x}", val)),
             Self::Param(str) => (vec![str.clone()], str.clone()),
-            Self::ParamField { name, value } => (name.clone(), value.clone()),
+            Self::ParamsField { params, formula } => (params.clone(), formula.clone()),
         }
     }
 }
 
-/// Field parsing error
-/// Descibe potential field error and imcompatible options
-#[derive(Error, Debug, Clone)]
-pub enum FieldError {
-    #[error("Field definition crossed word-boundary:\n  => {self:?}")]
-    WordBoundary(parser::FieldOpt),
+/// Utility function to compute aligned offset
+fn align_on(bytes_align: usize, val: usize) -> usize {
+    let remainder = val % bytes_align;
+
+    if 0 != remainder {
+        val + bytes_align - remainder
+    } else {
+        val
+    }
 }
 
 #[derive(Debug, Clone, Getters, Serialize, Deserialize)]
@@ -57,7 +113,7 @@ pub struct Field {
     description: String,
     size_b: usize,
     offset_b: usize,
-    default: Default,
+    default: DefaultVal,
 }
 
 impl Field {
@@ -74,16 +130,19 @@ impl Field {
             };
 
             if (offset_b + field.size_b) > word_size {
-                return Err(FieldError::WordBoundary(field.clone()).into());
+                return Err(RegmapError::WordBoundary {
+                    word_b: word_size,
+                    field_offset: offset_b,
+                    field_b: field.size_b,
+                    msg_info: format!("{:?}", field),
+                }
+                .into());
             }
 
-            let default = match (field.default_val, &field.param_name) {
-                (None, None) => Default::Val(0),
-                (None, Some(p)) => Default::Param(p.clone()),
-                (Some(v), None) => Default::Val(v),
-                (Some(v), Some(p)) => {
-                    return Err(DefaultError::BothSpecified(v, p.clone()).into());
-                }
+            let default = if let Some(dflt) = &field.default {
+                dflt.clone()
+            } else {
+                DefaultVal::Cst(0)
             };
 
             nxt_offset += offset_b + field.size_b;
@@ -100,46 +159,24 @@ impl Field {
         Ok(expanded_field)
     }
 
-    pub fn get_default(
-        fields: &IndexMap<String, Self>,
-        owner: &Owner,
-    ) -> Result<Default, anyhow::Error> {
-        match owner {
-            Owner::Parameter => {
-                let mut params_name = Vec::new();
-                let mut params_value = String::new();
+    pub fn get_default(fields: &IndexMap<String, Self>) -> Result<DefaultVal, anyhow::Error> {
+        let mut params = Vec::new();
+        let mut formula = String::new();
 
-                for (k, f) in fields.iter() {
-                    let param = match &f.default {
-                        Default::Param(p) => p.clone(),
-                        _ => {
-                            return Err(DefaultError::ExpectParam(k.clone()).into());
-                        }
-                    };
-                    params_value += &format!("+({param} << {})", f.offset_b);
-                    params_name.push(param);
+        for (k, f) in fields.iter() {
+            let param = match &f.default {
+                DefaultVal::Param(p) => p.clone(),
+                DefaultVal::Cst(val) => format!("{val}"),
+                _ => {
+                    // TODO return error or fuse
+                    return Err(DefaultError::ExpectParam(k.clone()).into());
                 }
-                Ok(Default::ParamField {
-                    name: params_name,
-                    value: params_value,
-                })
-            }
-            _ => {
-                let mut value = 0_usize;
-
-                for (k, f) in fields.iter() {
-                    match f.default {
-                        Default::Val(v) => {
-                            value += v << f.offset_b;
-                        }
-                        _ => {
-                            return Err(DefaultError::ExpectValue(k.clone()).into());
-                        }
-                    }
-                }
-                Ok(Default::Val(value))
-            }
+            };
+            // TODO add param masking to prevent overflow
+            formula += &format!("+({param} << {})", f.offset_b);
+            params.push(param);
         }
+        Ok(DefaultVal::ParamsField { params, formula })
     }
 }
 
@@ -155,19 +192,6 @@ impl std::fmt::Display for Field {
     }
 }
 
-/// Register parsing error
-/// Descibe potential register error and imcompatible options
-#[derive(Error, Debug, Clone)]
-pub enum RegisterError {
-    #[error("Incompatible Access right for Parameter:\n  => {self:?}")]
-    ParameterAccess(parser::RegisterOpt),
-    // #[error("Incompatible Access right for User:\n  => {self:?}")]
-    // UserAccess(parser::RegisterOpt),
-    #[error("Incompatible Access right for Kernel:\n  => {self:?}")]
-    KernelAccess(parser::RegisterOpt),
-    #[error("Invalid offset:\n  => {self:?}")]
-    Offset(parser::RegisterOpt),
-}
 #[derive(Debug, Clone, Getters)]
 #[getset(get = "pub")]
 pub struct Register {
@@ -176,41 +200,79 @@ pub struct Register {
     read_access: ReadAccess,
     write_access: WriteAccess,
     offset: usize,
-    default: Default,
+    default: DefaultVal,
     field: Option<IndexMap<String, Field>>,
 }
 
 impl Register {
     pub fn from_opt(
         regs: &mut Iter<'_, String, parser::RegisterOpt>,
-        offset: usize,
+        section_offset: usize,
         word_size: usize,
     ) -> Result<IndexMap<String, Self>, anyhow::Error> {
         let mut expanded_register = IndexMap::new();
-        let word_bytes = word_size / 8;
-        let mut nxt_offset = offset;
+        let word_bytes = word_size / std::mem::size_of::<u8>();
+        let mut auto_offset = section_offset;
 
         for (name, register) in regs {
             // Check correctness of the mode
             match (register.owner, register.read_access, register.write_access) {
                 (Owner::Parameter, ReadAccess::Read, WriteAccess::None) => {}
                 (Owner::Parameter, _rd, _wr) => {
-                    return Err(RegisterError::ParameterAccess(register.clone()).into())
+                    return Err(RegmapError::Access {
+                        owner: register.owner,
+                        rd: register.read_access,
+                        wr: register.write_access,
+                        msg_info: format!("{:?}", register),
+                    }
+                    .into())
                 }
                 (Owner::User, _rd, _wr) => {}
                 (Owner::Kernel, _rd, WriteAccess::Write) => {
-                    return Err(RegisterError::KernelAccess(register.clone()).into())
+                    return Err(RegmapError::Access {
+                        owner: register.owner,
+                        rd: register.read_access,
+                        wr: register.write_access,
+                        msg_info: format!("{:?}", register),
+                    }
+                    .into())
                 }
                 (Owner::Kernel, _rd, _wr) => {}
             }
 
-            // Check correctness of offset
-            let reg_offset = match register.offset {
-                Some(ofst) => ofst,
-                None => nxt_offset,
+            // Extract required alignement
+            // Subword alignement is not supported
+            let bytes_align = match register.bytes_align {
+                Some(align) => {
+                    if (align % word_bytes) != 0 {
+                        return Err(RegmapError::ByteAlign {
+                            word_align: word_bytes,
+                            request_align: align,
+                            msg_info: format!("{:?}", register),
+                        }
+                        .into());
+                    } else {
+                        align
+                    }
+                }
+                None => word_bytes,
             };
-            if reg_offset < nxt_offset {
-                return Err(RegisterError::Offset(register.clone()).into());
+
+            // Compute offset with alignement
+            let raw_offset = match register.offset {
+                Some(ofst) => ofst + section_offset,
+                None => auto_offset,
+            };
+            let mut reg_offset = align_on(bytes_align, raw_offset);
+
+            // Check correctness of offset
+            if reg_offset < auto_offset {
+                return Err(RegmapError::Offset {
+                    min_offset: auto_offset,
+                    request_offset: reg_offset,
+                    msg_info: format!("{:?}", register),
+                }
+                .into());
             }
 
             // Expand inner
@@ -224,46 +286,48 @@ impl Register {
             };
 
             // Expand default
-            let default = match register.owner {
-                Owner::Parameter => match (register.default_val, &register.param_name) {
-                    (None, None) => match expand_field.as_ref() {
-                        Some(f) => Field::get_default(f, &register.owner)?,
-                        None => {
-                            return Err(DefaultError::Missing.into());
-                        }
-                    },
-                    (None, Some(p)) => match expand_field.as_ref() {
-                        Some(_f) => {
-                            return Err(DefaultError::Override(name.clone()).into());
-                        }
-                        None => Default::Param(p.clone()),
-                    },
-                    (Some(_), None) => {
-                        return Err(DefaultError::ExpectParam(name.clone()).into());
-                    }
-                    (Some(v), Some(p)) => {
-                        return Err(DefaultError::BothSpecified(v, p.clone()).into());
-                    }
-                },
-                _ => match (register.default_val, &register.param_name) {
-                    (None, None) => match expand_field.as_ref() {
-                        Some(f) => Field::get_default(f, &register.owner)?,
-                        None => Default::Val(0),
-                    },
-                    (None, Some(_p)) => {
-                        return Err(DefaultError::ExpectValue(name.clone()).into());
-                    }
-                    (Some(v), None) => match expand_field.as_ref() {
-                        Some(_f) => {
-                            return Err(DefaultError::Override(name.clone()).into());
-                        }
-                        None => Default::Val(v),
-                    },
-                    (Some(v), Some(p)) => {
-                        return Err(DefaultError::BothSpecified(v, p.clone()).into());
-                    }
-                },
-            };
+            // TODO
+            // let default = match register.owner {
+            //     Owner::Parameter => match (register.default_val, &register.param_name) {
+            //         (None, None) => match expand_field.as_ref() {
+            //             Some(f) => Field::get_default(f, &register.owner)?,
+            //             None => {
+            //                 return Err(DefaultError::Missing.into());
+            //             }
+            //         },
+            //         (None, Some(p)) => match expand_field.as_ref() {
+            //             Some(_f) => {
+            //                 return Err(DefaultError::Override(name.clone()).into());
+            //             }
+            //             None => Default::Param(p.clone()),
+            //         },
+            //         (Some(_), None) => {
+            //             return Err(DefaultError::ExpectParam(name.clone()).into());
+            //         }
+            //         (Some(v), Some(p)) => {
+            //             return Err(DefaultError::BothSpecified(v, p.clone()).into());
+            //         }
+            //     },
+            //     _ => match (register.default_val, &register.param_name) {
+            //         (None, None) => match expand_field.as_ref() {
+            //             Some(f) => Field::get_default(f, &register.owner)?,
+            //             None => Default::Val(0),
+            //         },
+            //         (None, Some(_p)) => {
+            //             return Err(DefaultError::ExpectValue(name.clone()).into());
+            //         }
+            //         (Some(v), None) => match expand_field.as_ref() {
+            //             Some(_f) => {
+            //                 return Err(DefaultError::Override(name.clone()).into());
+            //             }
+            //             None => Default::Val(v),
+            //         },
+            //         (Some(v), Some(p)) => {
+            //             return Err(DefaultError::BothSpecified(v, p.clone()).into());
+            //         }
+            //     },
+            // };
+            let default = DefaultVal::Cst(0);
 
             // Build register instance
             let mut reg = Self {
@@ -271,27 +335,27 @@ impl Register {
                 owner: register.owner,
                 read_access: register.read_access,
                 write_access: register.write_access,
-                offset: nxt_offset,
+                offset: reg_offset,
                 default,
                 field: expand_field,
             };
 
-            // Duplicate if required
-            match register.duplicate.as_ref() {
-                Some(suffix) => {
-                    for s in suffix {
-                        let full_name = format!("{}{}", name, s);
-                        // patch offset and insert
-                        reg.offset = nxt_offset;
-                        nxt_offset += word_bytes;
-                        let _ = expanded_register.insert(full_name, reg.clone());
-                    }
+            // Handle duplication
+            // -> No duplication is 1iteration without name extension
+            // NB: Duplication always have automatically computed offset
+            let duplicate = register.duplicate.clone().unwrap_or(vec![String::new()]);
+            duplicate.iter().enumerate().for_each(|(i, s)| {
+                let full_name = format!("{}{}", name, s);
+                // Patch offset if needed
+                if i != 0 {
+                    reg_offset = align_on(bytes_align, reg_offset + word_bytes);
+                    reg.offset = reg_offset;
                 }
-                None => {
-                    nxt_offset += word_bytes;
-                    let _ = expanded_register.insert(name.clone(), reg.clone());
-                }
-            }
+                // Insert in regmap
+                let _ = expanded_register.insert(full_name, reg.clone());
+            });
+            // Update next usable offset
+            auto_offset = reg_offset + word_bytes;
         }
         Ok(expanded_register)
     }
@@ -318,85 +382,121 @@ impl std::fmt::Display for Register {
     }
 }
 
-/// Section parsing error
-/// Descibe potential register error and imcompatible options
-#[derive(Error, Debug, Clone)]
-pub enum SectionError {
-    #[error("Invalid offset:\n  => {self:?}")]
-    Offset(parser::SectionOpt),
-}
 #[derive(Debug, Clone, Getters)]
 #[getset(get = "pub")]
 pub struct Section {
     description: String,
     offset: usize,
-    align_offset: bool, // Usefull ?
+    bytes_align: usize,
+    range: usize,
     register: IndexMap<String, Register>,
 }
 
 impl Section {
     pub fn from_opt(
         sections: &mut Iter<'_, String, parser::SectionOpt>,
-        offset: usize,
-        word_size: usize,
+        regmap_offset: usize,
+        word_bytes: usize,
     ) -> Result<IndexMap<String, Self>, anyhow::Error> {
         let mut expanded_section = IndexMap::new();
-        let word_bytes = word_size / 8;
-        let mut nxt_offset = offset;
+        let mut auto_offset = regmap_offset;
 
         for (name, section) in sections {
-            // Check correctness of offset
-            let sec_offset = match section.offset {
-                Some(ofst) => ofst,
-                None => nxt_offset,
-            };
-            if sec_offset < nxt_offset {
-                return Err(SectionError::Offset(section.clone()).into());
-            }
-
-            // Duplicate if required
-            // Have to regenerate register with updated offset in each duplicated section
-            match section.duplicate.as_ref() {
-                Some(suffix) => {
-                    for s in suffix.iter() {
-                        // Expand inner
-                        let expanded_reg = Register::from_opt(
-                            &mut section.register.iter(),
-                            nxt_offset,
-                            word_size,
-                        )?;
-
-                        let full_name = format!("{}{}", name, s);
-                        // update offset and insert
-                        nxt_offset += expanded_reg.len() * word_bytes;
-                        let _ = expanded_section.insert(
-                            full_name,
-                            Self {
-                                description: section.description.clone(),
-                                offset: nxt_offset,
-                                align_offset: section.align_offset.unwrap_or(false),
-                                register: expanded_reg.clone(),
-                            },
-                        );
+            // Extract required alignement
+            // Subword alignement is not supported
+            let bytes_align = match section.bytes_align {
+                Some(align) => {
+                    if (align % word_bytes) != 0 {
+                        return Err(RegmapError::ByteAlign {
+                            word_align: word_bytes,
+                            request_align: align,
+                            msg_info: format!("{:?}", section),
+                        }
+                        .into());
+                    } else {
+                        align
                     }
                 }
-                None => {
-                    // Expand inner
-                    let expanded_reg =
-                        Register::from_opt(&mut section.register.iter(), nxt_offset, word_size)?;
+                None => word_bytes,
+            };
 
-                    // update offset and insert
-                    nxt_offset += expanded_reg.len() * word_bytes;
-                    let _ = expanded_section.insert(
-                        name.clone(),
-                        Self {
-                            description: section.description.clone(),
-                            offset: nxt_offset,
-                            align_offset: section.align_offset.unwrap_or(false),
-                            register: expanded_reg.clone(),
-                        },
-                    );
+            // Compute offset with alignement
+            let raw_offset = match section.offset {
+                Some(ofst) => ofst + regmap_offset,
+                None => auto_offset,
+            };
+            // TODO should we force alignement when offset specified by user
+            let mut sec_offset = align_on(bytes_align, raw_offset);
+
+            // Check correctness of offset
+            if sec_offset < auto_offset {
+                return Err(RegmapError::Offset {
+                    min_offset: auto_offset,
+                    request_offset: sec_offset,
+                    msg_info: format!("{:?}", section),
                 }
+                .into());
+            }
+
+            // Expand inner register
+            let expanded_reg =
+                Register::from_opt(&mut section.register.iter(), sec_offset, word_bytes)?;
+
+            // Check range
+            let real_range = expanded_reg
+                .iter()
+                .map(|reg| reg.1.offset + word_bytes)
+                .max()
+                .unwrap_or(sec_offset)
+                - sec_offset;
+
+            let range = if let Some(request_range) = section.range {
+                if real_range > request_range {
+                    return Err(RegmapError::Range {
+                        request_range,
+                        real_range,
+                        msg_info: format!("{:?}", section),
+                    }
+                    .into());
+                } else {
+                    request_range
+                }
+            } else {
+                real_range
+            };
+
+            // Handle duplication
+            // -> No duplication is 1iteration without name extension
+            for (i, s) in section
+                .duplicate
+                .clone()
+                .unwrap_or(vec![String::new()])
+                .iter()
+                .enumerate()
+            {
+                // Patch offset if needed
+                // NB: Have to regenerate register with updated offset in each duplicated section
+                let register = if i != 0 {
+                    sec_offset = align_on(bytes_align, sec_offset + range);
+                    Register::from_opt(&mut section.register.iter(), sec_offset, word_bytes)?
+                } else {
+                    expanded_reg.clone()
+                };
+
+                let full_name = format!("{}{}", name, s);
+
+                let _ = expanded_section.insert(
+                    full_name,
+                    Self {
+                        description: section.description.clone(),
+                        offset: sec_offset,
+                        range,
+                        bytes_align,
+                        register,
+                    },
+                );
+                // update auto_offset
+                auto_offset = sec_offset + range;
             }
         }
         Ok(expanded_section)
@@ -406,11 +506,9 @@ impl Section {
 impl std::fmt::Display for Section {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "  description: {}", self.description)?;
-        writeln!(
-            f,
-            "  offset: 0x{:x}, align_offset: {:?}",
-            self.offset, self.align_offset
-        )?;
+        writeln!(f, "  offset: 0x{:x}", self.offset)?;
+        writeln!(f, "  range:  0x{:x}", self.range)?;
+        writeln!(f, "  bytes_align: {:?}", self.bytes_align)?;
         write!(f, "  Register: [")?;
         for (name, reg) in self.register.iter() {
             write!(f, "\n  {}: [\n", name)?;
@@ -429,21 +527,36 @@ pub struct Regmap {
     description: String,
     word_size_b: usize,
     offset: usize,
-    ext_pkg: Vec<String>,
     range: usize,
+    ext_pkg: Vec<String>,
     section: IndexMap<String, Section>,
 }
 
 impl Regmap {
     pub fn from_opt(regmap: parser::RegmapOpt) -> Result<Self, anyhow::Error> {
         let offset = regmap.offset.unwrap_or(0);
-        let section = Section::from_opt(&mut regmap.section.iter(), offset, regmap.word_size_b)?;
-        let range = (regmap.word_size_b / 8)
-            * section
-                .iter()
-                .map(|(_sn, s)| s.register.iter().map(|(_rn, r)| r.offset).max().unwrap())
-                .max()
-                .unwrap();
+        let word_bytes = usize::div_ceil(regmap.word_size_b, u8::BITS as usize);
+
+        // Construct section
+        let section = Section::from_opt(&mut regmap.section.iter(), offset, word_bytes)?;
+
+        // Check range validity
+        let real_range = section.iter().map(|(_sn, s)| s.range).sum();
+        let range = if let Some(request_range) = regmap.range {
+            if real_range > request_range {
+                return Err(RegmapError::Range {
+                    request_range,
+                    real_range,
+                    msg_info: format!("{:?}", regmap),
+                }
+                .into());
+            } else {
+                request_range
+            }
+        } else {
+            real_range
+        };
+
         Ok(Self {
             module_name: regmap.module_name,
             description: regmap.description,
@@ -459,11 +572,9 @@ impl Regmap {
 impl std::fmt::Display for Regmap {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "description: {}", self.description)?;
-        writeln!(
-            f,
-            "offset: 0x{:x}, word_size_b: {:?}",
-            self.offset, self.word_size_b
-        )?;
+        writeln!(f, "  offset: 0x{:x}", self.offset)?;
+        writeln!(f, "  range:  0x{:x}", self.range)?;
+        writeln!(f, "  word_size_b: {:?}", self.word_size_b)?;
         writeln!(f, "External package: {:?}", self.ext_pkg)?;
         write!(f, "Section: [")?;
         for (name, sec) in self.section.iter() {

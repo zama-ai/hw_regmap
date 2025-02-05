@@ -4,6 +4,7 @@
 //!
 //! Also provide a set of function to serde it from/toward toml file
 //!
+use super::DefaultVal;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -54,8 +55,7 @@ pub struct FieldOpt {
     pub description: String,
     pub size_b: usize,
     pub offset_b: Option<usize>,
-    pub default_val: Option<usize>,
-    pub param_name: Option<String>,
+    pub default: Option<DefaultVal>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -64,8 +64,8 @@ pub struct RegisterOpt {
     pub owner: Owner,
     pub read_access: ReadAccess,
     pub write_access: WriteAccess,
-    pub default_val: Option<usize>,
-    pub param_name: Option<String>,
+    pub default: Option<DefaultVal>,
+    pub bytes_align: Option<usize>,
     pub offset: Option<usize>,
     pub field: Option<IndexMap<String, FieldOpt>>,
     pub duplicate: Option<Vec<String>>,
@@ -75,7 +75,8 @@ pub struct RegisterOpt {
 pub struct SectionOpt {
     pub description: String,
     pub offset: Option<usize>,
-    pub align_offset: Option<bool>,
+    pub range: Option<usize>,
+    pub bytes_align: Option<usize>,
     pub duplicate: Option<Vec<String>>,
     pub register: IndexMap<String, RegisterOpt>,
 }
@@ -86,6 +87,7 @@ pub struct RegmapOpt {
     pub description: String,
     pub word_size_b: usize,
     pub offset: Option<usize>,
+    pub range: Option<usize>,
     pub ext_pkg: Vec<String>,
     pub section: IndexMap<String, SectionOpt>,
 }
