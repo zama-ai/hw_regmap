@@ -1,0 +1,61 @@
+# This is a sample example of register-map definition
+
+module_name="Debug Offset"
+description="Simple snippets to check the offset features"
+word_size_b = 32
+offset = 0x4000
+range= 0x1000
+# -> Register only between [0x4000 -> 0x5000 [
+ext_pkg = []
+
+# =====================================================================================================================
+[section.Params]
+description="Register that expose inner RTL parameters"
+offset= 0x1000
+range=0x100
+byte_align=4
+
+[section.Params.register.ParamA]
+  description="Parameter A"
+  owner="Parameter"
+  read_access="Read"
+  write_access="None"
+  param_name="PARAM_A"
+  offset=0x20
+
+[section.Params.register.ParamB]
+  description="Parameter B"
+  owner="Parameter"
+  read_access="Read"
+  write_access="None"
+  param_name="PARAM_B"
+  offset=0x30
+
+# =====================================================================================================================
+[section.FreeOffset]
+description="Section with automatic offset computation"
+bytes_align=32 # -> 0x5034 -> 0x5040
+duplicate=["_bank0","_bank1"]
+[section.FreeOffset.register.test]
+  description="Dummy addr register with automatic computation offset"
+  owner="User"
+  read_access="Read"
+  write_access="Write"
+  default={Cst=0x80}
+  duplicate=["_msb", "_lsb"]
+
+# =====================================================================================================================
+[section.FixOffset]
+description="Section with fixed offset"
+offset=0x2000
+bytes_align=8 # -> 0x5034 -> 0x5040
+duplicate=["_bank0","_bank1"]
+[section.FixOffset.register.test]
+  description="Dummy addr register with fixed offset"
+  owner="User"
+  read_access="Read"
+  write_access="Write"
+  default={Param="DFLT_ADDR"}
+  duplicate=["_msb", "_lsb"]
+# =====================================================================================================================
+
