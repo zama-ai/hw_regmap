@@ -11,6 +11,10 @@ use thiserror::Error;
 /// Descibe potential register error and imcompatible options
 #[derive(Error, Debug, Clone)]
 pub enum RegmapError {
+    #[error("Couldn't generate Regmap from empty RegmapOpt list")]
+    NoEntry,
+    #[error("Error: Couldn't merge register map with != word_size_b")]
+    WordSize,
     #[error("Field definition crossed word-boundary:[ Word width (bits): {word_b}, Field [offset {field_offset}, width {field_b}]]\n  => {msg_info}")]
     WordBoundary {
         word_b: usize,
@@ -531,38 +535,107 @@ pub struct Regmap {
 }
 
 impl Regmap {
-    pub fn from_opt(regmap: parser::RegmapOpt) -> Result<Self, anyhow::Error> {
-        let offset = regmap.offset.unwrap_or(0);
-        let word_bytes = usize::div_ceil(regmap.word_size_b, u8::BITS as usize);
+    pub fn from_opt(regmaps: &mut [parser::RegmapOpt]) -> Result<Self, anyhow::Error> {
+        //1. Check compliance
+        if regmaps.is_empty() {
+            return Err(RegmapError::NoEntry.into());
+        }
 
-        // Construct section
-        let section = Section::from_opt(&mut regmap.section.iter(), offset, word_bytes)?;
+        // -> Couldn't merge regmap with != word_size_b
+        let word_size_min = regmaps
+            .iter()
+            .map(|register| register.word_size_b)
+            .min()
+            .unwrap();
+        let word_size_max = regmaps
+            .iter()
+            .map(|register| register.word_size_b)
+            .max()
+            .unwrap();
+        let word_size_b = if word_size_min == word_size_max {
+            word_size_min
+        } else {
+            return Err(RegmapError::WordSize.into());
+        };
 
-        // Check range validity
-        let real_range = section.iter().map(|(_sn, s)| s.range).sum();
-        let range = if let Some(request_range) = regmap.range {
-            if real_range > request_range {
-                return Err(RegmapError::Range {
-                    request_range,
-                    real_range,
+        //2. Order regmap slice based on their offset
+        regmaps.sort_by(|a, b| a.offset.cmp(&b.offset));
+        let global_offset = regmaps[0].offset.clone().unwrap_or(0);
+
+        //3. Fuse top-level properties
+        let (module_name, description) = {
+            let (name, descr) = regmaps
+                .iter()
+                .map(|r| (r.module_name.as_str(), r.description.as_str()))
+                .collect::<(Vec<_>, Vec<_>)>();
+            (
+                name.as_slice().join("_").to_string(),
+                descr.as_slice().join("\n\n").to_string(),
+            )
+        };
+        let ext_pkg = regmaps
+            .iter()
+            .map(|r| &r.ext_pkg)
+            .flatten()
+            .map(|pkg| pkg.clone())
+            .collect::<Vec<_>>();
+
+        //4. Expand regmap sections
+        let mut global_section = IndexMap::new();
+        let mut global_range = 0;
+        let mut auto_offset = 0;
+        let word_bytes = usize::div_ceil(word_size_b, u8::BITS as usize);
+
+        for regmap in regmaps {
+            // Compute offset and check correctness
+            let offset = match regmap.offset {
+                Some(ofst) => ofst,
+                None => auto_offset,
+            };
+            if offset < auto_offset {
+                return Err(RegmapError::Offset {
+                    min_offset: auto_offset,
+                    request_offset: offset,
                     msg_info: format!("{:?}", regmap),
                 }
                 .into());
-            } else {
-                request_range
             }
-        } else {
-            real_range
-        };
+
+            // Construct section
+            let section = Section::from_opt(&mut regmap.section.iter(), offset, word_bytes)?;
+
+            // Check range validity
+            let real_range = section.iter().map(|(_sn, s)| s.range).sum();
+            let range = if let Some(request_range) = regmap.range {
+                if real_range > request_range {
+                    return Err(RegmapError::Range {
+                        request_range,
+                        real_range,
+                        msg_info: format!("{:?}", regmap),
+                    }
+                    .into());
+                } else {
+                    request_range
+                }
+            } else {
+                real_range
+            };
+            // Append section/range to global
+            global_section.extend(section);
+            global_range += real_range;
+
+            // Update auto_offset for next iteration
+            auto_offset = offset + range;
+        }
 
         Ok(Self {
-            module_name: regmap.module_name,
-            description: regmap.description,
-            word_size_b: regmap.word_size_b,
-            ext_pkg: regmap.ext_pkg,
-            offset,
-            range,
-            section,
+            module_name,
+            description,
+            word_size_b,
+            ext_pkg,
+            offset: global_offset,
+            range: global_range,
+            section: global_section,
         })
     }
 }
