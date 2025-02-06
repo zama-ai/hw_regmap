@@ -1,0 +1,62 @@
+# This is a sample example of register-map definition
+
+module_name="debug_default"
+description="Simple register configuration to check default value"
+word_size_b = 32
+offset = 0x00
+ext_pkg = []
+
+# =====================================================================================================================
+[section.Params]
+description="Contain parameters with field and default value based on parameters"
+offset= 0x10
+align_offset=true
+
+[section.Params.register.NoField]
+  description="Register without field"
+  owner="Parameter"
+  read_access="Read"
+  write_access="None"
+  default={Param="NO_FIELD_PARAMS"}
+
+[section.Params.register.WithFieldParams]
+  description="Register with Fields and params default"
+  owner="Parameter"
+  read_access="Read"
+  write_access="None"
+  field.sub_a = { size_b=8, offset_b=0 , default={Param="SUB_A"}, description="Subfield A"}
+  field.sub_b = { size_b=8, offset_b=8 , default={Param="SUB_B"}, description="Subfield B"}
+  field.sub_c = { size_b=8, offset_b=16, default={Param="SUB_C"}, description="Subfield C"}
+  field.sub_d = { size_b=8, offset_b=24, default={Param="SUB_D"}, description="Subfield D"}
+
+[section.Params.register.WithFieldCst]
+  description="Register with Fields and constant default"
+  owner="Parameter"
+  read_access="Read"
+  write_access="None"
+  field.sub_a = { size_b=8, offset_b=0 , default={Cst=0x1}, description="Subfield A"}
+  field.sub_b = { size_b=8, offset_b=8 , default={Cst=0x2}, description="Subfield B"}
+  field.sub_c = { size_b=8, offset_b=16, default={Cst=0x3}, description="Subfield C"}
+  field.sub_d = { size_b=8, offset_b=24, default={Cst=0x4}, description="Subfield D"}
+
+[section.Params.register.WithFieldMixed]
+  description="Register with Fields and mixed default"
+  owner="Parameter"
+  read_access="Read"
+  write_access="None"
+  field.sub_a = { size_b=8, offset_b=0 , default={Param="SUB_A"}, description="Subfield A"}
+  field.sub_b = { size_b=8, offset_b=8 , default={Cst=0x2}, description="Subfield B"}
+  field.sub_c = { size_b=8, offset_b=16, default={Param="SUB_C"}, description="Subfield C"}
+  field.sub_d = { size_b=8, offset_b=24, default={Cst=0x4}, description="Subfield D"}
+
+[section.Params.register.WithFieldGlobal]
+  description="Register with Fields and global default"
+  owner="Parameter"
+  read_access="Read"
+  write_access="None"
+  default = {Param="WITH_FIELD_GLOBAL"}
+  field.sub_a = { size_b=8, offset_b=0 , description="Subfield A"}
+  field.sub_b = { size_b=8, offset_b=8 , description="Subfield B"}
+  field.sub_c = { size_b=8, offset_b=16, description="Subfield C"}
+  field.sub_d = { size_b=8, offset_b=24, description="Subfield D"}
+
