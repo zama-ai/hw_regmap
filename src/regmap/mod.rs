@@ -18,6 +18,10 @@ pub enum RegmapError {
         field_b: usize,
         msg_info: String,
     },
+    #[error("Default defined at both level (i.e. register & field): \n => {msg_info}")]
+    DfltOverride { msg_info: String },
+    #[error("Expect Param or Cst [get: {dflt:?}]:\n  => {msg_info:?}.")]
+    DfltInvalid { dflt: DefaultVal, msg_info: String },
     #[error("Incompatible Access right for {owner:?} [rd: {rd:?}, wr: {wr:?}]:\n  => {msg_info}")]
     Access {
         owner: Owner,
@@ -47,25 +51,6 @@ pub enum RegmapError {
         request_align: usize,
         msg_info: String,
     },
-}
-
-/// Default parsing error
-/// Descibe potential default val/param imcompatible options
-#[derive(Error, Debug, Clone)]
-pub enum DefaultError {
-    #[error(
-        "Incompatible default value/params. Only one could be specified at a time:\n  => {self:?}."
-    )]
-    BothSpecified(usize, String),
-
-    #[error("Expect a Parameter name:\n  => {self:?}.")]
-    ExpectParam(String),
-    #[error("Expect a default value:\n  => {self:?}.")]
-    ExpectValue(String),
-    #[error("Default parameter missing.\n")]
-    Missing,
-    #[error("Redefined at outer level: \n => {self:?}")]
-    Override(String),
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
@@ -113,7 +98,7 @@ pub struct Field {
     description: String,
     size_b: usize,
     offset_b: usize,
-    default: DefaultVal,
+    default: Option<DefaultVal>,
 }
 
 impl Field {
@@ -129,7 +114,7 @@ impl Field {
                 None => nxt_offset,
             };
 
-            if (offset_b + field.size_b) > word_size {
+            if (offset_b + field.size_b) > (word_size * u8::BITS as usize) {
                 return Err(RegmapError::WordBoundary {
                     word_b: word_size,
                     field_offset: offset_b,
@@ -139,12 +124,6 @@ impl Field {
                 .into());
             }
 
-            let default = if let Some(dflt) = &field.default {
-                dflt.clone()
-            } else {
-                DefaultVal::Cst(0)
-            };
-
             nxt_offset += offset_b + field.size_b;
             let _ = expanded_field.insert(
                 name.clone(),
@@ -152,31 +131,62 @@ impl Field {
                     description: field.description.clone(),
                     size_b: field.size_b,
                     offset_b,
-                    default,
+                    default: field.default.clone(),
                 },
             );
         }
         Ok(expanded_field)
     }
 
-    pub fn get_default(fields: &IndexMap<String, Self>) -> Result<DefaultVal, anyhow::Error> {
-        let mut params = Vec::new();
-        let mut formula = String::new();
+    pub fn get_default(
+        fields: &IndexMap<String, Self>,
+        reg_ctx: &parser::RegisterOpt,
+    ) -> Result<Option<DefaultVal>, anyhow::Error> {
+        let field_with_dflt = fields
+            .iter()
+            .filter(|(k, field)| field.default.is_some())
+            .collect::<Vec<_>>();
 
-        for (k, f) in fields.iter() {
-            let param = match &f.default {
-                DefaultVal::Param(p) => p.clone(),
-                DefaultVal::Cst(val) => format!("{val}"),
-                _ => {
-                    // TODO return error or fuse
-                    return Err(DefaultError::ExpectParam(k.clone()).into());
-                }
-            };
-            // TODO add param masking to prevent overflow
-            formula += &format!("+({param} << {})", f.offset_b);
-            params.push(param);
+        if field_with_dflt.is_empty() {
+            Ok(None)
+        } else {
+            let mut params = Vec::new();
+            let mut formula = String::new();
+
+            for (k, field) in field_with_dflt.into_iter() {
+                match field
+                    .default
+                    .as_ref()
+                    .expect("None value must have been filtered before")
+                {
+                    DefaultVal::Param(p) => {
+                        // Expose parameters at interface and update formula
+                        params.push(p.clone());
+                        formula += &format!(
+                            "+(({p} & 'h{:x}) << {})",
+                            (1 << field.size_b) - 1,
+                            field.offset_b
+                        );
+                    }
+                    DefaultVal::Cst(val) => {
+                        // Update formula only
+                        formula += &format!(
+                            "+(('h{val:x} & 'h{:x}) << {})",
+                            (1 << field.size_b) - 1,
+                            field.offset_b
+                        );
+                    }
+                    _ => {
+                        return Err(RegmapError::DfltInvalid {
+                            dflt: field.default.as_ref().unwrap().clone(),
+                            msg_info: format!("{:?}", reg_ctx),
+                        }
+                        .into());
+                    }
+                };
+            }
+            Ok(Some(DefaultVal::ParamsField { params, formula }))
         }
-        Ok(DefaultVal::ParamsField { params, formula })
     }
 }
 
@@ -286,48 +296,36 @@ impl Register {
             };
 
             // Expand default
-            // TODO
-            // let default = match register.owner {
-            //     Owner::Parameter => match (register.default_val, &register.param_name) {
-            //         (None, None) => match expand_field.as_ref() {
-            //             Some(f) => Field::get_default(f, &register.owner)?,
-            //             None => {
-            //                 return Err(DefaultError::Missing.into());
-            //             }
-            //         },
-            //         (None, Some(p)) => match expand_field.as_ref() {
-            //             Some(_f) => {
-            //                 return Err(DefaultError::Override(name.clone()).into());
-            //             }
-            //             None => Default::Param(p.clone()),
-            //         },
-            //         (Some(_), None) => {
-            //             return Err(DefaultError::ExpectParam(name.clone()).into());
-            //         }
-            //         (Some(v), Some(p)) => {
-            //             return Err(DefaultError::BothSpecified(v, p.clone()).into());
-            //         }
-            //     },
-            //     _ => match (register.default_val, &register.param_name) {
-            //         (None, None) => match expand_field.as_ref() {
-            //             Some(f) => Field::get_default(f, &register.owner)?,
-            //             None => Default::Val(0),
-            //         },
-            //         (None, Some(_p)) => {
-            //             return Err(DefaultError::ExpectValue(name.clone()).into());
-            //         }
-            //         (Some(v), None) => match expand_field.as_ref() {
-            //             Some(_f) => {
-            //                 return Err(DefaultError::Override(name.clone()).into());
-            //             }
-            //             None => Default::Val(v),
-            //         },
-            //         (Some(v), Some(p)) => {
-            //             return Err(DefaultError::BothSpecified(v, p.clone()).into());
-            //         }
-            //     },
-            // };
-            let default = DefaultVal::Cst(0);
+            let default = match register.default.as_ref() {
+                Some(dflt) => match expand_field.as_ref() {
+                    Some(field) => match Field::get_default(field, register)? {
+                        Some(_dflt) => {
+                            return Err(RegmapError::DfltOverride {
+                                msg_info: format!("{:?}", register),
+                            }
+                            .into());
+                        }
+                        None => match dflt {
+                            DefaultVal::ParamsField { .. } => {
+                                return Err(RegmapError::DfltInvalid {
+                                    dflt: dflt.clone(),
+                                    msg_info: format!("{:?}", register),
+                                }
+                                .into());
+                            }
+                            _ => dflt.clone(),
+                        },
+                    },
+                    None => dflt.clone(),
+                },
+                None => match expand_field.as_ref() {
+                    Some(field) => match Field::get_default(field, register)? {
+                        Some(dflt) => dflt,
+                        None => DefaultVal::Cst(0),
+                    },
+                    None => DefaultVal::Cst(0),
+                },
+            };
 
             // Build register instance
             let mut reg = Self {
