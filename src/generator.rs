@@ -109,7 +109,7 @@ impl SvRegisterPkg {
         ofs_name.make_ascii_uppercase();
         context.insert("base_name", &base_name);
         context.insert("ofs_name", &ofs_name);
-        context.insert("ofs_val", &register_props.offset());
+        context.insert("ofs_val", &format!("'h{:x}", register_props.offset()));
 
         if let Some(fields) = register_props.field() {
             // Sanitize fields -> insert padding if necessary
@@ -139,8 +139,6 @@ impl SvRegisterPkg {
         }
 
         // Render addr section
-        context.insert("ofs_name", &ofs_name);
-        context.insert("ofs_val", &register_props.offset());
         let addr_snippets = tera.render("pkg/addr.sv", &context).unwrap();
 
         // Render struct section
