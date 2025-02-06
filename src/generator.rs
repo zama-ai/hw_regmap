@@ -58,10 +58,9 @@ impl SvRegister {
         context.insert("have_fields", &register_props.field().is_some());
 
         // Render Param section
-        let param_snippets = match register_props.owner() {
-            Owner::Parameter => tera.render("module/param.sv", &context).unwrap(),
-            _ => String::new(),
-        };
+        // NB: Trim \n at end to prevent double comma insertion
+        let raw_param_snippets = tera.render("module/param.sv", &context).unwrap();
+        let param_snippets = raw_param_snippets.trim_end_matches("\n").to_string();
 
         // Render Io section
         let io_snippets = match register_props.owner() {
