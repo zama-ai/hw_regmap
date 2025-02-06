@@ -10,8 +10,8 @@ use clap::Parser;
 #[clap(long_about = "Generate RTL register map")]
 pub struct Args {
     // Regmap configuration ----------------------------------------------------
-    #[clap(long, value_parser, default_value = "regmap.toml")]
-    toml_file: String,
+    #[clap(long, value_parser)]
+    toml_file: Vec<String>,
 
     // Output configuration ----------------------------------------------------
     // Output folder path
@@ -44,10 +44,14 @@ fn main() {
     println!("User Options: {args:?}");
 
     // Parse toml file
-    let regmap = regmap::parser::RegmapOpt::read_from(&args.toml_file);
+    let mut regmap_list = args
+        .toml_file
+        .iter()
+        .map(|toml| regmap::parser::RegmapOpt::read_from(toml))
+        .collect::<Vec<_>>();
 
     // Expand regmap => Check properties and expand optionnal fields
-    let regmap = regmap::Regmap::from_opt(regmap).unwrap();
+    let regmap = regmap::Regmap::from_opt(&mut regmap_list).unwrap();
     if args.verbose {
         println!("{regmap}");
     }

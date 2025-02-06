@@ -105,12 +105,15 @@ impl std::fmt::Display for FlatRegmap {
 }
 
 impl FlatRegmap {
-    pub fn from_file(regmap_toml: &str) -> Self {
+    pub fn from_file(regmap_toml: &[&str]) -> Self {
         // Parse regmap with optional fields
-        let opt_regmap = crate::RegmapOpt::read_from(regmap_toml);
+        let mut regmap_list = regmap_toml
+            .iter()
+            .map(|toml| crate::RegmapOpt::read_from(toml))
+            .collect::<Vec<_>>();
 
         // Expand fields and check to have concrete regmap
-        let regmap = crate::Regmap::from_opt(opt_regmap).unwrap();
+        let regmap = crate::Regmap::from_opt(&mut regmap_list).unwrap();
         Self::new(regmap)
     }
 
