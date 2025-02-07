@@ -39,7 +39,7 @@ fn post_process(raw: &str) -> String {
     post_rendered.to_string()
 }
 
-fn main() {
+fn main() -> std::io::Result<()> {
     let args = Args::parse();
     println!("User Options: {args:?}");
 
@@ -59,8 +59,8 @@ fn main() {
     // Create a new Tera instances
     // Analyse all available SystemVerilog template
     let tera_sv = Tera::new("templates/**/*.sv").unwrap();
-    // Analyse all available json template
-    let tera_json = Tera::new("templates/**/*.json").unwrap();
+    // Analyse all available doc template
+    let tera_doc = Tera::new("templates/**/fmt_as.*").unwrap();
 
     // Ensure that output folder exist
     std::fs::create_dir_all(&args.output_path).unwrap();
@@ -129,17 +129,24 @@ fn main() {
 
     std::fs::write(rtl_pkg, pkg_post_rendered).expect("Unable to write file");
 
-    // Generate JSON documentation ===============================================================
+    // Generate documentation ====================================================================
+    // JSON
+    // Serialize as json for full access all fields
     let doc_json = format!("{}/{}_doc.json", args.output_path, args.basename);
+    let doc_json_f = std::fs::File::create(&doc_json)?;
+    serde_json::to_writer_pretty(doc_json_f, &regmap)?;
 
+    // Markdown
+    // Generate a structure document targeting online documentation
+    let doc_md = format!("{}/{}_doc.md", args.output_path, args.basename);
     // Expand to docs and store in targeted file
     let mut context = tera::Context::new();
     // Extract version from env
     let git_version = option_env!("GIT_VERSION").unwrap_or("unknow");
     context.insert("tool_version", git_version);
     context.insert("regmap", &regmap);
-    let json_rendered = tera_json.render("docs/fmt_as.json", &context).unwrap();
-    let json_post_rendered = post_process(&json_rendered);
+    let md_rendered = tera_doc.render("docs/fmt_as.md", &context).unwrap();
 
-    std::fs::write(doc_json, json_post_rendered).expect("Unable to write file");
+    std::fs::write(doc_md, md_rendered).expect("Unable to write file");
+    Ok(())
 }

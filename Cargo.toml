@@ -15,4 +15,5 @@ clap = { version = "*", features = ["derive"] }
 getset = "0.1.2"
 tera = "1.0"
 regex = "1.10.4"
+serde_json = "1.0.138"
 
