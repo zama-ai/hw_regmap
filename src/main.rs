@@ -56,9 +56,11 @@ fn main() {
         println!("{regmap}");
     }
 
-    // Create a new Tera instance
-    // Analyse all available template
-    let tera = Tera::new("templates/**/*.sv").unwrap();
+    // Create a new Tera instances
+    // Analyse all available SystemVerilog template
+    let tera_sv = Tera::new("templates/**/*.sv").unwrap();
+    // Analyse all available json template
+    let tera_json = Tera::new("templates/**/*.json").unwrap();
 
     // Ensure that output folder exist
     std::fs::create_dir_all(&args.output_path).unwrap();
@@ -76,7 +78,7 @@ fn main() {
                 reg_name,
                 reg,
                 &mut used_params,
-                &tera,
+                &tera_sv,
             ));
         })
     });
@@ -92,7 +94,7 @@ fn main() {
     context.insert("ext_pkg", &regmap.ext_pkg());
     context.insert("range", &regmap.range());
     context.insert("regs_sv", &regs_sv);
-    let module_rendered = tera.render("module.sv", &context).unwrap();
+    let module_rendered = tera_sv.render("module.sv", &context).unwrap();
     let module_post_rendered = post_process(&module_rendered);
 
     std::fs::write(rtl_module, module_post_rendered).expect("Unable to write file");
@@ -109,7 +111,7 @@ fn main() {
                 reg_name,
                 regmap.word_size_b(),
                 reg,
-                &tera,
+                &tera_sv,
             ));
         })
     });
@@ -122,8 +124,22 @@ fn main() {
     context.insert("module_name", &regmap.module_name());
     context.insert("word_size_b", &regmap.word_size_b());
     context.insert("regs_pkg_sv", &regs_pkg_sv);
-    let pkg_rendered = tera.render("pkg.sv", &context).unwrap();
+    let pkg_rendered = tera_sv.render("pkg.sv", &context).unwrap();
     let pkg_post_rendered = post_process(&pkg_rendered);
 
     std::fs::write(rtl_pkg, pkg_post_rendered).expect("Unable to write file");
+
+    // Generate JSON documentation ===============================================================
+    let doc_json = format!("{}/{}_doc.json", args.output_path, args.basename);
+
+    // Expand to docs and store in targeted file
+    let mut context = tera::Context::new();
+    // Extract version from env
+    let git_version = option_env!("GIT_VERSION").unwrap_or("unknow");
+    context.insert("tool_version", git_version);
+    context.insert("regmap", &regmap);
+    let json_rendered = tera_json.render("docs/fmt_as.json", &context).unwrap();
+    let json_post_rendered = post_process(&json_rendered);
+
+    std::fs::write(doc_json, json_post_rendered).expect("Unable to write file");
 }

@@ -206,7 +206,7 @@ impl std::fmt::Display for Field {
     }
 }
 
-#[derive(Debug, Clone, Getters)]
+#[derive(Debug, Clone, Getters, Serialize, Deserialize)]
 #[getset(get = "pub")]
 pub struct Register {
     description: String,
@@ -384,7 +384,7 @@ impl std::fmt::Display for Register {
     }
 }
 
-#[derive(Debug, Clone, Getters)]
+#[derive(Debug, Clone, Getters, Serialize, Deserialize)]
 #[getset(get = "pub")]
 pub struct Section {
     description: String,
@@ -522,7 +522,7 @@ impl std::fmt::Display for Section {
     }
 }
 
-#[derive(Debug, Getters)]
+#[derive(Debug, Getters, Serialize, Deserialize)]
 #[getset(get = "pub")]
 pub struct Regmap {
     module_name: String,
