@@ -20,9 +20,9 @@ Below is a summary of all the registers in the current register map:
 
 | Section Name | Offset | Range | Description |
 |-------------:|:------:|:-----:|:------------|
-{% for name, section in regmap.section %}
-| [{{ name }}](#section-{{ name | slugify }}) | {{section.offset}} | {{section.range}} | {{ section.description }} |
-{% endfor %}
+{%- for name, section in regmap.section %}
+| [{{ name }}](#section-{{ name | slugify }}) | {{ as_hex(val=section.offset) }} | {{ as_hex(val=section.range) }} | {{ section.description }} |
+{%- endfor %}
 
 
 ---
@@ -37,7 +37,7 @@ Below is a summary of all the registers in the current section {{name}}:
 | Name             | Offset | Owner    | Read Access | Write Access | Description |
 |-----------------:|:------:|:--------:|:-----------:|:------------:|:------------|
 {%- for name, register in section.register %}
-| [{{ name }}](#register-{{ name | slugify }}) | {{ register.offset }} | {{ register.owner }} | {{ register.read_access }} | {{ register.write_access }} |  {{ register.description }} |
+| [{{ name }}](#register-{{ name | slugify }}) | {{ as_hex(val=register.offset) }} | {{ register.owner }} | {{ register.read_access }} | {{ register.write_access }} |  {{ register.description }} |
 {%- endfor %}
 
 
