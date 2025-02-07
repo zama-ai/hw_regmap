@@ -17,18 +17,17 @@ pub struct SvRegister {
 impl SvRegister {
     pub fn from_register(
         section_name: &str,
-        register_name: &str,
-        register_props: &Register,
+        register: &Register,
         used_params: &mut Vec<String>,
         tera: &Tera,
     ) -> Self {
         let mut context = tera::Context::new();
-        let full_name = format!("{section_name}_{register_name}");
-        let mut cst_name = format!("{section_name}_{register_name}_OFS");
+        let full_name = format!("{section_name}_{}", register.name());
+        let mut cst_name = format!("{section_name}_{}_OFS", register.name());
         cst_name.make_ascii_uppercase();
         context.insert("name", &full_name);
         context.insert("offset_cst_name", &cst_name);
-        let (mut dn, dv) = register_props.default().to_sv_namesval();
+        let (mut dn, dv) = register.default().to_sv_namesval();
         // Filter duplication in param_name.
         // NB: A parameters used by mulitple reg must appear only once at top level
         // -> Retain only params not already in use and update the in-use list
@@ -38,31 +37,25 @@ impl SvRegister {
         context.insert("default_name", &dn);
         context.insert("default_val", &dv);
         // Expand Owner/Mode to ease tera templating
-        context.insert(
-            "param_reg",
-            &matches!(register_props.owner(), Owner::Parameter),
-        );
-        context.insert(
-            "reg_update",
-            &matches!(register_props.owner(), Owner::Kernel),
-        );
+        context.insert("param_reg", &matches!(register.owner(), Owner::Parameter));
+        context.insert("reg_update", &matches!(register.owner(), Owner::Kernel));
         context.insert(
             "wr_user",
-            &match register_props.owner() {
-                Owner::User => register_props.write_access() != &WriteAccess::None,
+            &match register.owner() {
+                Owner::User => register.write_access() != &WriteAccess::None,
                 _ => false,
             },
         );
         context.insert(
             "rd_notify",
-            &matches!(register_props.read_access(), ReadAccess::ReadNotify),
+            &matches!(register.read_access(), ReadAccess::ReadNotify),
         );
         context.insert(
             "wr_notify",
-            &matches!(register_props.write_access(), WriteAccess::WriteNotify),
+            &matches!(register.write_access(), WriteAccess::WriteNotify),
         );
 
-        context.insert("have_fields", &register_props.field().is_some());
+        context.insert("have_fields", &register.field().is_some());
 
         // Render Param section
         // NB: Trim \n at end to prevent double comma insertion
@@ -70,14 +63,14 @@ impl SvRegister {
         let param_snippets = raw_param_snippets.trim_end_matches("\n").to_string();
 
         // Render Io section
-        let io_snippets = match register_props.owner() {
+        let io_snippets = match register.owner() {
             Owner::Parameter => String::new(),
             _ => tera.render("module/io.sv", &context).unwrap(),
         };
 
         let ff_wr_snippets = tera.render("module/write.sv", &context).unwrap();
 
-        let rd_snippets = match register_props.read_access() {
+        let rd_snippets = match register.read_access() {
             ReadAccess::None => String::new(),
             ReadAccess::Read | ReadAccess::ReadNotify => {
                 tera.render("module/read.sv", &context).unwrap()
@@ -104,40 +97,35 @@ pub struct SvRegisterPkg {
 impl SvRegisterPkg {
     pub fn from_register(
         section_name: &str,
-        register_name: &str,
-        register_w: &usize,
-        register_props: &Register,
+        word_w: &usize,
+        register: &Register,
         tera: &Tera,
     ) -> Self {
         let mut context = tera::Context::new();
-        let base_name = format!("{section_name}_{register_name}");
+        let base_name = format!("{section_name}_{}", register.name());
         let mut ofs_name = format!("{base_name}_OFS");
         ofs_name.make_ascii_uppercase();
         context.insert("base_name", &base_name);
         context.insert("ofs_name", &ofs_name);
-        context.insert("ofs_val", &format!("'h{:x}", register_props.offset()));
+        context.insert("ofs_val", &format!("'h{:x}", register.offset()));
 
-        if let Some(fields) = register_props.field() {
+        if let Some(fields) = register.field() {
             // Sanitize fields -> insert padding if necessary
             let mut cur_ofs = 0;
             let mut padded_fields = Vec::new();
-            for (k, v) in fields {
-                if cur_ofs != *v.offset_b() {
+            for f in fields {
+                if cur_ofs != *f.offset_b() {
                     padded_fields.push((
                         format!("padding_{cur_ofs}"),
                         cur_ofs,
-                        (v.offset_b() - cur_ofs),
+                        (f.offset_b() - cur_ofs),
                     ));
                 }
-                padded_fields.push((k.clone(), *v.offset_b(), *v.size_b()));
-                cur_ofs = v.offset_b() + v.size_b();
+                padded_fields.push((f.name().clone(), *f.offset_b(), *f.size_b()));
+                cur_ofs = f.offset_b() + f.size_b();
             }
-            if cur_ofs != *register_w {
-                padded_fields.push((
-                    format!("padding_{cur_ofs}"),
-                    cur_ofs,
-                    (register_w - cur_ofs),
-                ));
+            if cur_ofs != *word_w {
+                padded_fields.push((format!("padding_{cur_ofs}"), cur_ofs, (word_w - cur_ofs)));
             }
             // NB: SystemVerilog struct are defined from MSB word to LSB word
             padded_fields.reverse();
@@ -148,7 +136,7 @@ impl SvRegisterPkg {
         let addr_snippets = tera.render("pkg/addr.sv", &context).unwrap();
 
         // Render struct section
-        let struct_snippets = if register_props.field().is_some() {
+        let struct_snippets = if register.field().is_some() {
             tera.render("pkg/struct.sv", &context).unwrap()
         } else {
             String::new()
@@ -156,7 +144,7 @@ impl SvRegisterPkg {
 
         Self {
             name: base_name,
-            description: register_props.description().clone(),
+            description: register.description().clone(),
             addr_snippets,
             struct_snippets,
         }

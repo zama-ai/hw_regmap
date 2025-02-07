@@ -99,6 +99,7 @@ fn align_on(bytes_align: usize, val: usize) -> usize {
 #[derive(Debug, Clone, Getters, Serialize, Deserialize)]
 #[getset(get = "pub")]
 pub struct Field {
+    name: String,
     description: String,
     size_b: usize,
     offset_b: usize,
@@ -109,8 +110,8 @@ impl Field {
     pub fn from_opt(
         fields: &mut Iter<'_, String, parser::FieldOpt>,
         word_size: usize,
-    ) -> Result<IndexMap<String, Self>, anyhow::Error> {
-        let mut expanded_field = IndexMap::new();
+    ) -> Result<Vec<Self>, anyhow::Error> {
+        let mut expanded_field = Vec::with_capacity(fields.len());
         let mut nxt_offset = 0;
         for (name, field) in fields {
             let offset_b = match field.offset_b {
@@ -129,29 +130,27 @@ impl Field {
             }
 
             nxt_offset += offset_b + field.size_b;
-            let _ = expanded_field.insert(
-                name.clone(),
-                Self {
-                    description: field.description.clone(),
-                    size_b: field.size_b,
-                    offset_b,
-                    default: field.default.clone(),
-                },
-            );
+            expanded_field.push(Self {
+                name: name.clone(),
+                description: field.description.clone(),
+                size_b: field.size_b,
+                offset_b,
+                default: field.default.clone(),
+            });
         }
         // Sort by offset_b
-        expanded_field.sort_by(|_ka, va, _kb, vb| va.offset_b.cmp(&vb.offset_b));
+        expanded_field.sort_by(|a, b| a.offset_b.cmp(&b.offset_b));
 
         Ok(expanded_field)
     }
 
     pub fn get_default(
-        fields: &IndexMap<String, Self>,
+        fields: &Vec<Self>,
         reg_ctx: &parser::RegisterOpt,
     ) -> Result<Option<DefaultVal>, anyhow::Error> {
         let field_with_dflt = fields
             .iter()
-            .filter(|(_k, field)| field.default.is_some())
+            .filter(|field| field.default.is_some())
             .collect::<Vec<_>>();
 
         if field_with_dflt.is_empty() {
@@ -160,7 +159,7 @@ impl Field {
             let mut params = Vec::new();
             let mut formula = String::new();
 
-            for (_k, field) in field_with_dflt.into_iter() {
+            for field in field_with_dflt.into_iter() {
                 match field
                     .default
                     .as_ref()
@@ -199,6 +198,7 @@ impl Field {
 
 impl std::fmt::Display for Field {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "      name: {}", self.name)?;
         writeln!(f, "      description: {}", self.description)?;
         writeln!(
             f,
@@ -212,13 +212,14 @@ impl std::fmt::Display for Field {
 #[derive(Debug, Clone, Getters, Serialize, Deserialize)]
 #[getset(get = "pub")]
 pub struct Register {
+    name: String,
     description: String,
     owner: Owner,
     read_access: ReadAccess,
     write_access: WriteAccess,
     offset: usize,
     default: DefaultVal,
-    field: Option<IndexMap<String, Field>>,
+    field: Option<Vec<Field>>,
 }
 
 impl Register {
@@ -226,8 +227,8 @@ impl Register {
         regs: &mut Iter<'_, String, parser::RegisterOpt>,
         section_offset: usize,
         word_size: usize,
-    ) -> Result<IndexMap<String, Self>, anyhow::Error> {
-        let mut expanded_register = IndexMap::new();
+    ) -> Result<Vec<Self>, anyhow::Error> {
+        let mut expanded_register = Vec::with_capacity(regs.len());
         let word_bytes = word_size / std::mem::size_of::<u8>();
         let mut auto_offset = section_offset;
 
@@ -296,7 +297,6 @@ impl Register {
             let expand_field = match register.field.as_ref() {
                 Some(fields) => {
                     let mut concrete_fields = Field::from_opt(&mut fields.iter(), word_size)?;
-                    concrete_fields.sort_by(|_xk, x, _yx, y| x.offset_b.cmp(&y.offset_b));
                     Some(concrete_fields)
                 }
                 None => None,
@@ -336,6 +336,7 @@ impl Register {
 
             // Build register instance
             let mut reg = Self {
+                name: name.clone(),
                 description: register.description.clone(),
                 owner: register.owner,
                 read_access: register.read_access,
@@ -346,24 +347,27 @@ impl Register {
             };
 
             // Handle duplication
-            // -> No duplication is 1iteration without name extension
+            // -> No duplication is 1 iteration without name extension
             // NB: Duplication always have automatically computed offset
             let duplicate = register.duplicate.clone().unwrap_or(vec![String::new()]);
             duplicate.iter().enumerate().for_each(|(i, s)| {
                 let full_name = format!("{}{}", name, s);
+                // Patch name
+                reg.name = full_name;
+
                 // Patch offset if needed
                 if i != 0 {
                     reg_offset = align_on(bytes_align, reg_offset + word_bytes);
                     reg.offset = reg_offset;
                 }
                 // Insert in regmap
-                let _ = expanded_register.insert(full_name, reg.clone());
+                expanded_register.push(reg.clone());
             });
             // Update next usable offset
             auto_offset = reg_offset + word_bytes;
         }
         // Sort by offset
-        expanded_register.sort_by(|_ka, va, _kb, vb| va.offset.cmp(&vb.offset));
+        expanded_register.sort_by(|a, b| a.offset.cmp(&b.offset));
 
         Ok(expanded_register)
     }
@@ -371,6 +375,7 @@ impl Register {
 
 impl std::fmt::Display for Register {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "    name: {}", self.name)?;
         writeln!(f, "    description: {}", self.description)?;
         writeln!(
             f,
@@ -379,10 +384,8 @@ impl std::fmt::Display for Register {
         )?;
         if self.field.is_some() {
             write!(f, "    Field: [")?;
-            for (name, field) in self.field.as_ref().unwrap().iter() {
-                write!(f, "\n    {}: [\n", name)?;
-                write!(f, "{field}")?;
-                write!(f, "    ]")?;
+            for field in self.field.as_ref().unwrap().iter() {
+                write!(f, "\n[{field}]")?;
             }
             writeln!(f, "    ]")?;
         }
@@ -393,11 +396,12 @@ impl std::fmt::Display for Register {
 #[derive(Debug, Clone, Getters, Serialize, Deserialize)]
 #[getset(get = "pub")]
 pub struct Section {
+    name: String,
     description: String,
     offset: usize,
     bytes_align: usize,
     range: usize,
-    register: IndexMap<String, Register>,
+    register: Vec<Register>,
 }
 
 impl Section {
@@ -405,8 +409,8 @@ impl Section {
         sections: &mut Iter<'_, String, parser::SectionOpt>,
         regmap_offset: usize,
         word_bytes: usize,
-    ) -> Result<IndexMap<String, Self>, anyhow::Error> {
-        let mut expanded_section = IndexMap::new();
+    ) -> Result<Vec<Self>, anyhow::Error> {
+        let mut expanded_section = Vec::with_capacity(sections.len());
         let mut auto_offset = regmap_offset;
 
         for (name, section) in sections {
@@ -453,7 +457,7 @@ impl Section {
             // Check range
             let real_range = expanded_reg
                 .iter()
-                .map(|reg| reg.1.offset + word_bytes)
+                .map(|reg| reg.offset + word_bytes)
                 .max()
                 .unwrap_or(sec_offset)
                 - sec_offset;
@@ -493,22 +497,20 @@ impl Section {
 
                 let full_name = format!("{}{}", name, s);
 
-                let _ = expanded_section.insert(
-                    full_name,
-                    Self {
-                        description: section.description.clone(),
-                        offset: sec_offset,
-                        range,
-                        bytes_align,
-                        register,
-                    },
-                );
+                let _ = expanded_section.push(Self {
+                    name: full_name,
+                    description: section.description.clone(),
+                    offset: sec_offset,
+                    range,
+                    bytes_align,
+                    register,
+                });
                 // update auto_offset
                 auto_offset = sec_offset + range;
             }
         }
         // Sort by offset
-        expanded_section.sort_by(|_ka, va, _kb, vb| va.offset.cmp(&vb.offset));
+        expanded_section.sort_by(|a, b| a.offset.cmp(&b.offset));
 
         Ok(expanded_section)
     }
@@ -516,15 +518,14 @@ impl Section {
 
 impl std::fmt::Display for Section {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "  name: {}", self.name)?;
         writeln!(f, "  description: {}", self.description)?;
         writeln!(f, "  offset: 0x{:x}", self.offset)?;
         writeln!(f, "  range:  0x{:x}", self.range)?;
         writeln!(f, "  bytes_align: {:?}", self.bytes_align)?;
         write!(f, "  Register: [")?;
-        for (name, reg) in self.register.iter() {
-            write!(f, "\n  {}: [\n", name)?;
-            write!(f, "{reg}")?;
-            write!(f, "  ]")?;
+        for reg in self.register.iter() {
+            write!(f, "\n[{reg}]")?;
         }
         writeln!(f, "  ]")?;
         Ok(())
@@ -540,7 +541,7 @@ pub struct Regmap {
     offset: usize,
     range: usize,
     ext_pkg: Vec<String>,
-    section: IndexMap<String, Section>,
+    section: Vec<Section>,
 }
 
 impl Regmap {
@@ -590,7 +591,7 @@ impl Regmap {
             .collect::<Vec<_>>();
 
         //4. Expand regmap sections
-        let mut global_section = IndexMap::new();
+        let mut global_section = Vec::new();
         let mut global_range = 0;
         let mut auto_offset = 0;
         let word_bytes = usize::div_ceil(word_size_b, u8::BITS as usize);
@@ -614,7 +615,7 @@ impl Regmap {
             let section = Section::from_opt(&mut regmap.section.iter(), offset, word_bytes)?;
 
             // Check range validity
-            let real_range = section.iter().map(|(_sn, s)| s.range).sum();
+            let real_range = section.iter().map(|s| s.range).sum();
             let range = if let Some(request_range) = regmap.range {
                 if real_range > request_range {
                     return Err(RegmapError::Range {
@@ -657,10 +658,8 @@ impl std::fmt::Display for Regmap {
         writeln!(f, "  word_size_b: {:?}", self.word_size_b)?;
         writeln!(f, "External package: {:?}", self.ext_pkg)?;
         write!(f, "Section: [")?;
-        for (name, sec) in self.section.iter() {
-            write!(f, "\n{}: [\n", name)?;
-            write!(f, "{sec}")?;
-            write!(f, "]")?;
+        for sec in self.section.iter() {
+            write!(f, "\n[{sec}]")?;
         }
         writeln!(f, "]")?;
         Ok(())

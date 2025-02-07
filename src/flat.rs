@@ -119,14 +119,14 @@ impl FlatRegmap {
 
     pub fn new(regmap: crate::Regmap) -> Self {
         let mut register = HashMap::new();
-        regmap.section().iter().for_each(|(sec_name, sec)| {
-            sec.register().iter().for_each(|(reg_name, reg)| {
-                let hash_name = format!("{sec_name}::{reg_name}");
+        regmap.section().iter().for_each(|sec| {
+            sec.register().iter().for_each(|reg| {
+                let hash_name = format!("{}::{}", sec.name(), reg.name());
                 let field = if let Some(fmap) = reg.field() {
                     let mut field = Vec::new();
-                    fmap.iter().for_each(|(f_name, f)| {
+                    fmap.iter().for_each(|f| {
                         field.push(FlatField {
-                            name: f_name.clone(),
+                            name: f.name().clone(),
                             description: f.description().clone(),
                             size_b: *f.size_b(),
                             offset_b: *f.offset_b(),
@@ -145,9 +145,9 @@ impl FlatRegmap {
                 register.insert(
                     hash_name,
                     FlatRegister {
-                        sec_name: sec_name.clone(),
+                        sec_name: sec.name().clone(),
                         sec_description: sec.description().clone(),
-                        reg_name: reg_name.clone(),
+                        reg_name: reg.name().clone(),
                         reg_description: reg.description().clone(),
                         access,
                         offset: *reg.offset(),

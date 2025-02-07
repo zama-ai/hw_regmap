@@ -20,31 +20,31 @@ Below is a summary of all the registers in the current register map:
 
 | Section Name | Offset | Range | Description |
 |-------------:|:------:|:-----:|:------------|
-{%- for sec_name, section in regmap.section %}
-| [{{ sec_name }}](#section-{{ sec_name | slugify }}) | {{ as_hex(val=section.offset) }} | {{ as_hex(val=section.range) }} | {{ section.description }} |
+{%- for section in regmap.section %}
+| [{{ section.name }}](#section-{{ section.name | slugify }}) | {{ as_hex(val=section.offset) }} | {{ as_hex(val=section.range) }} | {{ section.description }} |
 {%- endfor %}
 
 
 ---
 
-{% for sec_name, section in regmap.section %}
-## Section {{ sec_name | slugify }}
+{% for section in regmap.section %}
+## Section {{ section.name | slugify }}
 
 ### Register Overview
 
-Below is a summary of all the registers in the current section {{sec_name}}:
+Below is a summary of all the registers in the current section {{section.name}}:
 
 | Name             | Offset | Access | Description |
 |-----------------:|:------:|:------:|:------------|
-{%- for reg_name, register in section.register %}
-| [{{ reg_name }}](#register-{{ sec_name | slugify }}.{{ reg_name | slugify }}) | {{ as_hex(val=register.offset) }} | {% if register.read_access is containing("Read") %}R{%else%}.{% endif %}{% if register.write_access is containing("Write") %}W{%else%}.{%endif%} |  {{ register.description }} |
+{%- for register in section.register %}
+| [{{ register.name }}](#register-{{ section.name | slugify }}.{{ register.name | slugify }}) | {{ as_hex(val=register.offset) }} | {% if register.read_access is containing("Read") %}R{%else%}.{% endif %}{% if register.write_access is containing("Write") %}W{%else%}.{%endif%} |  {{ register.description }} |
 {%- endfor %}
 
 
 ---
 
-{% for reg_name, register in section.register %}
-### Register {{ sec_name | slugify }}.{{ reg_name | slugify }}
+{% for register in section.register %}
+### Register {{ section.name | slugify }}.{{ register.name | slugify }}
 
 - **Description**: {{ register.description }}
 - **Owner**: {{ register.owner }}
@@ -56,12 +56,12 @@ Below is a summary of all the registers in the current section {{sec_name}}:
 {% if register.field %}
 #### Field Details
 
-Register {{ reg_name }} contains following Sub-fields:
+Register {{ register.name }} contains following Sub-fields:
 
 | Field Name | Offset_b | Size_b | Default      | Description   |
 |-----------:|:--------:|:------:|:------------:|:--------------|
-{%- for field_name, field in register.field %}
-| {{ field_name }}      | {{ field.offset_b }} | {{field.size_b}} | {%- if field.default is object -%} {%for k,v in field.default %}{{v}}{%- if not loop.last %}, {% endif -%}{%endfor%}{% else %} N/A {%-endif-%} | {{ field.description }} |
+{%- for field in register.field %}
+| {{ field.name }}      | {{ field.offset_b }} | {{field.size_b}} | {%- if field.default is object -%} {%for k,v in field.default %}{{v}}{%- if not loop.last %}, {% endif -%}{%endfor%}{% else %} N/A {%-endif-%} | {{ field.description }} |
 {%- endfor %}
 {% endif %}
 
