@@ -1,0 +1,54 @@
+{
+"date": "{{ now() | date(format="%Y-%m-%d") }}",
+"tool_version": "{{ tool_version }}",
+{# Dump RegisterMap header properties #}
+"module_name": "{{regmap.module_name}}",
+"description": "{{regmap.description}}",
+"offset"     : {{regmap.offset}},
+"range"      : {{regmap.range}},
+"word_size_b": {{regmap.word_size_b}},
+"external_pkg": [{%for pkg in regmap.ext_pkg%}"{{pkg}}.sv",{%endfor%}],
+"Section": [
+  {%for name, section in regmap.section %}
+  {
+  {# Dump Section header properties #}
+  "name": "{{name}}",
+  "description": "{{section.description}}",
+  "offset"     : {{section.offset}},
+  "range"      : {{section.range}},
+  "bytes_align": {{section.bytes_align}},
+  "Register": [
+    {%for name, register in section.register %}
+    {
+    {# Dump Register header properties #}
+    "name"        : "{{name}}",
+    "description" : "{{register.description}}",
+    "owner"       : "{{register.owner}}",
+    "read_access" : "{{register.read_access}}",
+    "write_access": "{{register.write_access}}",
+    "offset"      : {{register.offset}},
+    "default"     : [{%for k,v in register.default %}"{{k}}:{{v}}"{%- if not loop.last %},{% endif -%}{%endfor%}]
+    {% if register.field is object %},
+    "Field": [
+      {%for name, field in register.field %}
+      {
+        {# Dump field properties #}
+        "name"       : "{{name}}",
+        "description": "{{field.description}}",
+        "size_b"     : "{{field.size_b}}",
+        "offset_b"   : "{{field.offset_b}}"
+        {% if field.default is object %},
+        "default"     : [{%for k,v in field.default %}"{{k}}:{{v}}"{%- if not loop.last %},{% endif -%}{%endfor%}]
+        {% endif %}
+      }{%- if not loop.last %},{% endif -%}
+      {%endfor%}
+    ]
+    {% endif %}
+    }{%- if not loop.last %},{% endif -%}
+    {%endfor%}
+  ]
+  }{%- if not loop.last %},{% endif -%}
+  {%endfor%}
+]
+}
+
