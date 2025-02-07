@@ -1,0 +1,61 @@
+# This is a sample example of register-map definition
+
+module_name="SliceA"
+description="Simple snippets to check the many toml features [SliceA]"
+word_size_b = 32
+offset = 0x2000
+range= 0x1000
+# -> Register only between [0x2000 -> 0x3000 [
+ext_pkg = ["global_common_pkg"]
+
+# =====================================================================================================================
+[section.ParamsA]
+description="Register that expose inner RTL parameters"
+offset= 0x1000
+range=0x100
+byte_align=4
+
+[section.ParamsA.register.ParamA]
+  description="Parameter A"
+  owner="Parameter"
+  read_access="Read"
+  write_access="None"
+  param_name="PARAM_A"
+  offset=0x20
+
+[section.ParamsA.register.ParamB]
+  description="Parameter B"
+  owner="Parameter"
+  read_access="Read"
+  write_access="None"
+  param_name="PARAM_B"
+  offset=0x30
+
+# =====================================================================================================================
+[section.FreeOffsetA]
+description="Section with automatic offset computation"
+bytes_align=32 # -> 0x5034 -> 0x5040
+duplicate=["_bank0","_bank1"]
+[section.FreeOffsetA.register.test]
+  description="Dummy addr register with automatic computation offset"
+  owner="User"
+  read_access="Read"
+  write_access="Write"
+  default={Cst=0x80}
+  duplicate=["_msb", "_lsb"]
+
+# =====================================================================================================================
+[section.FixOffsetA]
+description="Section with fixed offset"
+offset=0x2000
+bytes_align=8 # -> 0x5034 -> 0x5040
+duplicate=["_bank0","_bank1"]
+[section.FixOffsetA.register.test]
+  description="Dummy addr register with fixed offset"
+  owner="User"
+  read_access="Read"
+  write_access="Write"
+  default={Param="DFLT_ADDR_A"}
+  duplicate=["_msb", "_lsb"]
+# =====================================================================================================================
+
