@@ -19,6 +19,7 @@ impl SvRegister {
         section_name: &str,
         register_name: &str,
         register_props: &Register,
+        used_params: &mut Vec<String>,
         tera: &Tera,
     ) -> Self {
         let mut context = tera::Context::new();
@@ -27,7 +28,13 @@ impl SvRegister {
         cst_name.make_ascii_uppercase();
         context.insert("name", &full_name);
         context.insert("offset_cst_name", &cst_name);
-        let (dn, dv) = register_props.default().to_sv_namesval();
+        let (mut dn, dv) = register_props.default().to_sv_namesval();
+        // Filter duplication in param_name.
+        // NB: A parameters used by mulitple reg must appear only once at top level
+        // -> Retain only params not already in use and update the in-use list
+        dn.retain(|e| !used_params.contains(e));
+        used_params.extend(dn.clone());
+
         context.insert("default_name", &dn);
         context.insert("default_val", &dv);
         // Expand Owner/Mode to ease tera templating

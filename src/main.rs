@@ -68,10 +68,15 @@ fn main() {
 
     // Convert regmap in rtl snippets based on Tera
     let mut regs_sv = Vec::new();
+    let mut used_params = Vec::new();
     regmap.section().iter().for_each(|(sec_name, sec)| {
         sec.register().iter().for_each(|(reg_name, reg)| {
             regs_sv.push(generator::SvRegister::from_register(
-                sec_name, reg_name, reg, &tera,
+                sec_name,
+                reg_name,
+                reg,
+                &mut used_params,
+                &tera,
             ));
         })
     });
