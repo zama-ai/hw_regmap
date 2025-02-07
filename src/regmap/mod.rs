@@ -139,6 +139,9 @@ impl Field {
                 },
             );
         }
+        // Sort by offset_b
+        expanded_field.sort_by(|_ka, va, _kb, vb| va.offset_b.cmp(&vb.offset_b));
+
         Ok(expanded_field)
     }
 
@@ -148,7 +151,7 @@ impl Field {
     ) -> Result<Option<DefaultVal>, anyhow::Error> {
         let field_with_dflt = fields
             .iter()
-            .filter(|(k, field)| field.default.is_some())
+            .filter(|(_k, field)| field.default.is_some())
             .collect::<Vec<_>>();
 
         if field_with_dflt.is_empty() {
@@ -157,7 +160,7 @@ impl Field {
             let mut params = Vec::new();
             let mut formula = String::new();
 
-            for (k, field) in field_with_dflt.into_iter() {
+            for (_k, field) in field_with_dflt.into_iter() {
                 match field
                     .default
                     .as_ref()
@@ -359,6 +362,9 @@ impl Register {
             // Update next usable offset
             auto_offset = reg_offset + word_bytes;
         }
+        // Sort by offset
+        expanded_register.sort_by(|_ka, va, _kb, vb| va.offset.cmp(&vb.offset));
+
         Ok(expanded_register)
     }
 }
@@ -501,6 +507,9 @@ impl Section {
                 auto_offset = sec_offset + range;
             }
         }
+        // Sort by offset
+        expanded_section.sort_by(|_ka, va, _kb, vb| va.offset.cmp(&vb.offset));
+
         Ok(expanded_section)
     }
 }
