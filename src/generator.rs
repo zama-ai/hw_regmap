@@ -10,6 +10,7 @@ pub struct SvRegister {
     name: String,
     param_snippets: String,
     io_snippets: String,
+    default_snippets: String,
     rd_snippets: String,
     ff_wr_snippets: String,
 }
@@ -27,15 +28,15 @@ impl SvRegister {
         cst_name.make_ascii_uppercase();
         context.insert("name", &full_name);
         context.insert("offset_cst_name", &cst_name);
-        let (mut dn, dv) = register.default().to_sv_namesval();
+        let mut dflt_name = register.default().params_list();
         // Filter duplication in param_name.
         // NB: A parameters used by mulitple reg must appear only once at top level
         // -> Retain only params not already in use and update the in-use list
-        dn.retain(|e| !used_params.contains(e));
-        used_params.extend(dn.clone());
+        dflt_name.retain(|e| !used_params.contains(e));
+        used_params.extend(dflt_name.clone());
 
-        context.insert("default_name", &dn);
-        context.insert("default_val", &dv);
+        context.insert("default_name", &dflt_name);
+        context.insert("default_val", register.default());
         // Expand Owner/Mode to ease tera templating
         context.insert("param_reg", &matches!(register.owner(), Owner::Parameter));
         context.insert("reg_update", &matches!(register.owner(), Owner::Kernel));
@@ -68,6 +69,8 @@ impl SvRegister {
             _ => tera.render("module/io.sv", &context).unwrap(),
         };
 
+        let default_snippets = tera.render("module/default.sv", &context).unwrap();
+
         let ff_wr_snippets = tera.render("module/write.sv", &context).unwrap();
 
         let rd_snippets = match register.read_access() {
@@ -80,6 +83,7 @@ impl SvRegister {
             name: full_name,
             param_snippets,
             io_snippets,
+            default_snippets,
             rd_snippets,
             ff_wr_snippets,
         }

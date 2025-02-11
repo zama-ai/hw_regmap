@@ -71,16 +71,16 @@ pub enum DefaultVal {
     /// -> formula = "ParamA << 16 + (ParamB &0xffff)
     ParamsField {
         params: Vec<String>,
-        formula: String,
+        name_val: Vec<(String, String)>,
     },
 }
 
 impl DefaultVal {
-    pub fn to_sv_namesval(&self) -> (Vec<String>, String) {
+    pub fn params_list(&self) -> Vec<String> {
         match self {
-            Self::Cst(val) => (vec![], format!("'h{:x}", val)),
-            Self::Param(str) => (vec![str.clone()], str.clone()),
-            Self::ParamsField { params, formula } => (params.clone(), formula.clone()),
+            Self::Cst(_) => vec![],
+            Self::Param(str) => vec![str.clone()],
+            Self::ParamsField { params, .. } => params.clone(),
         }
     }
 }
@@ -157,41 +157,33 @@ impl Field {
             Ok(None)
         } else {
             let mut params = Vec::new();
-            let mut formula = String::new();
+            let mut name_val = Vec::new();
 
-            for field in field_with_dflt.into_iter() {
-                match field
-                    .default
-                    .as_ref()
-                    .expect("None value must have been filtered before")
-                {
-                    DefaultVal::Param(p) => {
-                        // Expose parameters at interface and update formula
+            for field in fields.into_iter() {
+                match field.default.as_ref() {
+                    Some(DefaultVal::Param(p)) => {
+                        // Expose parameters at interface and update name_val
                         params.push(p.clone());
-                        formula += &format!(
-                            "+(({p} & 'h{:x}) << {})",
-                            (1 << field.size_b) - 1,
-                            field.offset_b
-                        );
+                        name_val.push((field.name.clone(), p.clone()));
                     }
-                    DefaultVal::Cst(val) => {
-                        // Update formula only
-                        formula += &format!(
-                            "+(('h{val:x} & 'h{:x}) << {})",
-                            (1 << field.size_b) - 1,
-                            field.offset_b
-                        );
+                    Some(DefaultVal::Cst(val)) => {
+                        // Update name_val only
+                        name_val.push((field.name.clone(), format!("'h{val:x}")));
                     }
-                    _ => {
+                    Some(DefaultVal::ParamsField { .. }) => {
                         return Err(RegmapError::DfltInvalid {
                             dflt: field.default.as_ref().unwrap().clone(),
                             msg_info: format!("{:?}", reg_ctx),
                         }
                         .into());
                     }
+                    None => {
+                        // Update name_val only with 0 value
+                        name_val.push((field.name.clone(), "'h0".to_string()));
+                    }
                 };
             }
-            Ok(Some(DefaultVal::ParamsField { params, formula }))
+            Ok(Some(DefaultVal::ParamsField { params, name_val }))
         }
     }
 }
@@ -296,7 +288,7 @@ impl Register {
             // Expand inner
             let expand_field = match register.field.as_ref() {
                 Some(fields) => {
-                    let mut concrete_fields = Field::from_opt(&mut fields.iter(), word_size)?;
+                    let concrete_fields = Field::from_opt(&mut fields.iter(), word_size)?;
                     Some(concrete_fields)
                 }
                 None => None,

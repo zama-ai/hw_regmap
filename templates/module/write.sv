@@ -25,9 +25,10 @@
   assign r_{{name}}_rd_en = rd_en && (rd_add == {{ offset_cst_name }});
   assign r_{{name}} = r_{{name}}_upd;
   {% else %}
+
   always_ff @(posedge clk) begin
     if (!s_rst_n) begin
-      r_{{name}}       <= {{ default_val }};
+      r_{{name}}       <= {{name}}_default;
       {% if wr_notify %}r_{{name}}_wr_en <= 1'b0;{% endif %}
     end
     else begin
