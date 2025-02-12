@@ -37,7 +37,7 @@ Below is a summary of all the registers in the current section {{section.name}}:
 | Name             | Offset | Access | Description |
 |-----------------:|:------:|:------:|:------------|
 {%- for register in section.register %}
-| [{{ register.name }}](#register-{{ section.name | slugify }}.{{ register.name | slugify }}) | {{ as_hex(val=register.offset) }} | {% if register.read_access is containing("Read") %}R{%else%}.{% endif %}{% if register.write_access is containing("Write") %}W{%else%}.{%endif%} |  {{ register.description }} |
+| [{{ register.name }}](#register-{{ section.name | slugify }}{{ register.name | slugify }}) | {{ as_hex(val=register.offset) }} | {% if register.read_access is containing("Read") %}R{%else%}.{% endif %}{% if register.write_access is containing("Write") %}W{%else%}.{%endif%} |  {{ register.description }} |
 {%- endfor %}
 
 
