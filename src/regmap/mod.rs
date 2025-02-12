@@ -607,7 +607,11 @@ impl Regmap {
             let section = Section::from_opt(&mut regmap.section.iter(), offset, word_bytes)?;
 
             // Check range validity
-            let real_range = section.iter().map(|s| s.range).sum();
+            let real_range = section
+                .iter()
+                .map(|s| s.offset + s.range)
+                .max()
+                .unwrap_or(0);
             let range = if let Some(request_range) = regmap.range {
                 if real_range > request_range {
                     return Err(RegmapError::Range {
@@ -624,7 +628,7 @@ impl Regmap {
             };
             // Append section/range to global
             global_section.extend(section);
-            global_range += real_range;
+            global_range += range;
 
             // Update auto_offset for next iteration
             auto_offset = offset + range;
