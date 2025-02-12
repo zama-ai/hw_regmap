@@ -1,6 +1,6 @@
 pub mod parser;
 
-use indexmap::{map::Iter, IndexMap};
+use indexmap::map::Iter;
 
 use getset::Getters;
 use parser::{Owner, ReadAccess, WriteAccess};
@@ -65,10 +65,7 @@ pub enum DefaultVal {
     Param(String),
     /// Value construct from a list of parameters
     ///  * name field: contains the list of used parameters
-    ///  * formula: contains the aggregation formula
-    /// i.e. you want to build you constant from two parameters ParamA, ParamB. 16Msb for paramA, 16Lsb with ParamB
-    /// -> name = vec!["ParamA", "ParamB"]
-    /// -> formula = "ParamA << 16 + (ParamB &0xffff)
+    ///  * name_val: contains pair of field_name, value
     ParamsField {
         params: Vec<String>,
         name_val: Vec<(String, String)>,
@@ -145,7 +142,7 @@ impl Field {
     }
 
     pub fn get_default(
-        fields: &Vec<Self>,
+        fields: &[Self],
         reg_ctx: &parser::RegisterOpt,
     ) -> Result<Option<DefaultVal>, anyhow::Error> {
         let field_with_dflt = fields
@@ -159,7 +156,7 @@ impl Field {
             let mut params = Vec::new();
             let mut name_val = Vec::new();
 
-            for field in fields.into_iter() {
+            for field in fields.iter() {
                 match field.default.as_ref() {
                     Some(DefaultVal::Param(p)) => {
                         // Expose parameters at interface and update name_val
@@ -489,7 +486,7 @@ impl Section {
 
                 let full_name = format!("{}{}", name, s);
 
-                let _ = expanded_section.push(Self {
+                expanded_section.push(Self {
                     name: full_name,
                     description: section.description.clone(),
                     offset: sec_offset,
@@ -562,7 +559,7 @@ impl Regmap {
 
         //2. Order regmap slice based on their offset
         regmaps.sort_by(|a, b| a.offset.cmp(&b.offset));
-        let global_offset = regmaps[0].offset.clone().unwrap_or(0);
+        let global_offset = regmaps[0].offset.unwrap_or(0);
 
         //3. Fuse top-level properties
         let (module_name, description) = {
@@ -577,9 +574,8 @@ impl Regmap {
         };
         let ext_pkg = regmaps
             .iter()
-            .map(|r| &r.ext_pkg)
-            .flatten()
-            .map(|pkg| pkg.clone())
+            .flat_map(|r| &r.ext_pkg)
+            .cloned()
             .collect::<Vec<_>>();
 
         //4. Expand regmap sections
