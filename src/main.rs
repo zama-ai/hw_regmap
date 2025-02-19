@@ -69,6 +69,42 @@ pub fn as_hex(args: &HashMap<String, tera::Value>) -> tera::Result<tera::Value> 
     }
 }
 
+/// Simple function used to render integer in hexadecimal SystemVerilog format with tera
+/// Syntax in tera file is: as_sv_hex()
+pub fn as_sv_hex(args: &HashMap<String, tera::Value>) -> tera::Result<tera::Value> {
+    // Extract width if specified
+    let width = if let Some(width) = args.get("width") {
+        if let tera::Value::Number(num) = width {
+            Ok(Some(num.as_u64().unwrap() as usize))
+        } else {
+            Err(tera::Error::msg("Width is not an integer"))
+        }
+    } else {
+        Ok(None)
+    }?;
+
+    if let Some(value) = args.get("val") {
+        if let tera::Value::Number(num) = value {
+            let hex_str = format!(
+                "{}'h{:x}",
+                if let Some(w) = width {
+                    format!("{w}")
+                } else {
+                    "".to_string()
+                },
+                num.as_u64().unwrap(),
+            );
+            Ok(tera::Value::String(hex_str))
+        } else {
+            Err(tera::Error::msg("Value is not an integer"))
+        }
+    } else {
+        Err(tera::Error::msg(
+            "Function `as_sv_hex` didn't receive a `val` argument",
+        ))
+    }
+}
+
 fn main() -> std::io::Result<()> {
     let args = Args::parse();
     println!("User Options: {args:?}");
@@ -88,7 +124,8 @@ fn main() -> std::io::Result<()> {
 
     // Create a new Tera instances
     // Analyse all available SystemVerilog template
-    let tera_sv = Tera::new("templates/**/*.sv").unwrap();
+    let mut tera_sv = Tera::new("templates/**/*.sv").unwrap();
+    tera_sv.register_function("as_sv_hex", as_sv_hex);
     // Analyse all available doc template
     let mut tera_doc = Tera::new("templates/**/fmt_as.*").unwrap();
     tera_doc.register_function("as_hex", as_hex);
