@@ -11,7 +11,7 @@ ext_pkg = ["global_common_pkg"]
 # =====================================================================================================================
 [section.ParamsB]
 description="Register that expose inner RTL parameters"
-offset= 0x1000
+offset= 0x100
 range=0x100
 byte_align=4
 
@@ -47,7 +47,7 @@ duplicate=["_bank0","_bank1"]
 # =====================================================================================================================
 [section.FixOffsetB]
 description="Section with fixed offset"
-offset=0x2000
+offset=0x400
 bytes_align=8 # -> 0x5034 -> 0x5040
 duplicate=["_bank0","_bank1"]
 [section.FixOffsetB.register.test]

@@ -580,34 +580,34 @@ impl Regmap {
 
         //4. Expand regmap sections
         let mut global_section = Vec::new();
-        let mut global_range = 0;
         let mut auto_offset = 0;
         let word_bytes = usize::div_ceil(word_size_b, u8::BITS as usize);
 
         for regmap in regmaps {
             // Compute offset and check correctness
-            let offset = match regmap.offset {
+            let regmap_offset = match regmap.offset {
                 Some(ofst) => ofst,
                 None => auto_offset,
             };
-            if offset < auto_offset {
+            if regmap_offset < auto_offset {
                 return Err(RegmapError::Offset {
                     min_offset: auto_offset,
-                    request_offset: offset,
+                    request_offset: regmap_offset,
                     msg_info: format!("{:?}", regmap),
                 }
                 .into());
             }
 
             // Construct section
-            let section = Section::from_opt(&mut regmap.section.iter(), offset, word_bytes)?;
+            let section = Section::from_opt(&mut regmap.section.iter(), regmap_offset, word_bytes)?;
 
-            // Check range validity
+            // Check range validity for the given regmap
             let real_range = section
                 .iter()
                 .map(|s| s.offset + s.range)
                 .max()
-                .unwrap_or(0);
+                .unwrap_or(regmap_offset)
+                - regmap_offset;
             let range = if let Some(request_range) = regmap.range {
                 if real_range > request_range {
                     return Err(RegmapError::Range {
@@ -622,13 +622,20 @@ impl Regmap {
             } else {
                 real_range
             };
-            // Append section/range to global
+            // Append section to global
             global_section.extend(section);
-            global_range += range;
 
             // Update auto_offset for next iteration
-            auto_offset = offset + range;
+            auto_offset = regmap_offset + range;
         }
+        // Compute range of the regmap aggregation
+        // It's computed as max_addr - global_offset
+        let global_range = global_section
+            .iter()
+            .map(|s| s.offset + s.range)
+            .max()
+            .unwrap_or(global_offset)
+            - global_offset;
 
         Ok(Self {
             module_name,

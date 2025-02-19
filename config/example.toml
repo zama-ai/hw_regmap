@@ -4,7 +4,7 @@ module_name="hpu_regif_core"
 description="Hpu top-level register interface. Used by the host to retrieved RTL information, configure it and issue commands."
 word_size_b = 32
 offset = 0x00
-range = 0x1000
+range = 0x1100
 ext_pkg = ["axi_if_common_param_pkg", "axi_if_shell_axil_pkg"]
 
 # =====================================================================================================================
@@ -175,7 +175,6 @@ offset= 0x10
 # =====================================================================================================================
 [section.LdSt]
 description="Define some properties of CT buffers in board-memory"
-align_offset=true
 duplicate=["_bank0","_bank1","_bank2","_bank3"]
 [section.LdSt.register.addr]
   description="Ciphertext buffer addr"
@@ -187,7 +186,6 @@ duplicate=["_bank0","_bank1","_bank2","_bank3"]
 # =====================================================================================================================
 [section.PbsLut]
 description="Define PBS Lut offset in board-memory"
-align_offset=true
 
 [section.PbsLut.register.addr]
   description="Pbs Lut gid offset"
@@ -199,7 +197,6 @@ align_offset=true
 # =====================================================================================================================
 [section.Keys]
 description="Define keys location properties"
-align_offset=true
 duplicate=["_Bsk", "_Ksk"]
 
 [section.Keys.register.addr_pc]
@@ -227,7 +224,6 @@ duplicate=["_Bsk", "_Ksk"]
 # =====================================================================================================================
 [section.Bpip]
 description="Define BPIP configuration"
-align_offset=true
 
 [section.Bpip.register.use]
   description="(1) Use BPIP mode, (0) use IPIP mode (default)"
@@ -246,7 +242,6 @@ align_offset=true
 # =====================================================================================================================
 [section.Trace]
 description="Define Trace offset in board-memory"
-align_offset=true
 
 [section.Trace.register.addr]
   description="Trace address offset"
@@ -259,7 +254,6 @@ align_offset=true
 [section.WorkAck]
 description="Purpose of this section"
 offset= 0x800
-align_offset=true
 
 [section.WorkAck.register.workq]
   description="Insert work in workq and read status"
@@ -279,7 +273,6 @@ align_offset=true
 [section.Runtime]
 description="Contains all runtimes informations exposed by the RTL"
 offset= 0x1000
-align_offset=true
 
 [section.Runtime.register.errors]
   description="Error register (Could be reset by user)"
