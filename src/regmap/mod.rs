@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 use indexmap::map::Iter;
 
-use getset::Getters;
+use getset::{Getters, MutGetters};
 use parser::{Owner, ReadAccess, WriteAccess};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -523,9 +523,10 @@ impl std::fmt::Display for Section {
     }
 }
 
-#[derive(Debug, Getters, Serialize, Deserialize)]
+#[derive(Debug, Getters, MutGetters, Serialize, Deserialize)]
 #[getset(get = "pub")]
 pub struct Regmap {
+    #[getset(get_mut = "pub")]
     module_name: String,
     description: String,
     word_size_b: usize,
@@ -585,7 +586,7 @@ impl Regmap {
         let mut auto_offset = 0;
         let word_bytes = usize::div_ceil(word_size_b, u8::BITS as usize);
 
-        for regmap in regmaps {
+        for regmap in regmaps.iter() {
             // Compute offset and check correctness
             let regmap_offset = match regmap.offset {
                 Some(ofst) => ofst,

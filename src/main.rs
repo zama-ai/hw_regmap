@@ -105,36 +105,9 @@ pub fn as_sv_hex(args: &HashMap<String, tera::Value>) -> tera::Result<tera::Valu
     }
 }
 
-fn main() -> std::io::Result<()> {
-    let args = Args::parse();
-    println!("User Options: {args:?}");
-
-    // Parse toml file
-    let mut regmap_list = args
-        .toml_file
-        .iter()
-        .map(|toml| regmap::parser::RegmapOpt::read_from(toml))
-        .collect::<Vec<_>>();
-
-    // Expand regmap => Check properties and expand optionnal fields
-    let regmap = regmap::Regmap::from_opt(&mut regmap_list).unwrap();
-    if args.verbose {
-        println!("{regmap}");
-    }
-
-    // Create a new Tera instances
-    // Analyse all available SystemVerilog template
-    let mut tera_sv = Tera::new("templates/**/*.sv").unwrap();
-    tera_sv.register_function("as_sv_hex", as_sv_hex);
-    // Analyse all available doc template
-    let mut tera_doc = Tera::new("templates/**/fmt_as.*").unwrap();
-    tera_doc.register_function("as_hex", as_hex);
-
-    // Ensure that output folder exist
-    std::fs::create_dir_all(&args.output_path).unwrap();
-
-    // Generate module body  ======================================================================
-    let rtl_module = format!("{}/{}.sv", args.output_path, args.basename);
+fn generate_sv(regmap: &regmap::Regmap, output_path: &str, engine: &Tera) {
+    // Generate module body  ==================================================
+    let rtl_module = format!("{}/{}.sv", output_path, regmap.module_name());
 
     // Convert regmap in rtl snippets based on Tera
     let mut regs_sv = Vec::new();
@@ -145,7 +118,7 @@ fn main() -> std::io::Result<()> {
                 sec.name(),
                 reg,
                 &mut used_params,
-                &tera_sv,
+                engine,
             ));
         })
     });
@@ -161,13 +134,13 @@ fn main() -> std::io::Result<()> {
     context.insert("ext_pkg", &regmap.ext_pkg());
     context.insert("range", &regmap.range());
     context.insert("regs_sv", &regs_sv);
-    let module_rendered = tera_sv.render("module.sv", &context).unwrap();
+    let module_rendered = engine.render("module.sv", &context).unwrap();
     let module_post_rendered = post_process(&module_rendered);
+    std::fs::write(&rtl_module, module_post_rendered)
+        .unwrap_or_else(|_| panic!("Unable to write file {rtl_module}"));
 
-    std::fs::write(rtl_module, module_post_rendered).expect("Unable to write file");
-
-    // Generate addr/field pkg ===================================================================
-    let rtl_pkg = format!("{}/{}_pkg.sv", args.output_path, args.basename);
+    // Generate addr/field pkg ================================================
+    let rtl_pkg = format!("{}/{}_pkg.sv", output_path, regmap.module_name());
 
     // Convert regmap in pkg snippets based on Tera
     let mut regs_pkg_sv = Vec::new();
@@ -177,7 +150,7 @@ fn main() -> std::io::Result<()> {
                 sec.name(),
                 regmap.word_size_b(),
                 reg,
-                &tera_sv,
+                engine,
             ));
         })
     });
@@ -190,29 +163,82 @@ fn main() -> std::io::Result<()> {
     context.insert("module_name", &regmap.module_name());
     context.insert("word_size_b", &regmap.word_size_b());
     context.insert("regs_pkg_sv", &regs_pkg_sv);
-    let pkg_rendered = tera_sv.render("pkg.sv", &context).unwrap();
+    let pkg_rendered = engine.render("pkg.sv", &context).unwrap();
     let pkg_post_rendered = post_process(&pkg_rendered);
 
-    std::fs::write(rtl_pkg, pkg_post_rendered).expect("Unable to write file");
+    std::fs::write(&rtl_pkg, pkg_post_rendered)
+        .unwrap_or_else(|_| panic!("Unable to write file {rtl_pkg}"));
+}
 
+/// Generate Markdown and Json documentation in output_path folder
+fn generate_doc(regmap: &regmap::Regmap, output_path: &str, engine: &Tera) -> std::io::Result<()> {
     // Generate documentation ====================================================================
     // JSON
     // Serialize as json for full access all fields
-    let doc_json = format!("{}/{}_doc.json", args.output_path, args.basename);
+    let doc_json = format!("{}/{}_doc.json", output_path, regmap.module_name());
     let doc_json_f = std::fs::File::create(&doc_json)?;
     serde_json::to_writer_pretty(doc_json_f, &regmap)?;
 
     // Markdown
     // Generate a structure document targeting online documentation
-    let doc_md = format!("{}/{}_doc.md", args.output_path, args.basename);
+    let doc_md = format!("{}/{}_doc.md", output_path, regmap.module_name());
     // Expand to docs and store in targeted file
     let mut context = tera::Context::new();
     // Extract version from env
     let git_version = option_env!("GIT_VERSION").unwrap_or("unknow");
     context.insert("tool_version", git_version);
     context.insert("regmap", &regmap);
-    let md_rendered = tera_doc.render("docs/fmt_as.md", &context).unwrap();
+    let md_rendered = engine.render("docs/fmt_as.md", &context).unwrap();
+    std::fs::write(&doc_md, md_rendered)
+        .unwrap_or_else(|_| panic!("Unable to write file {doc_md}"));
+    Ok(())
+}
 
-    std::fs::write(doc_md, md_rendered).expect("Unable to write file");
+/// Parse user ClI
+/// Generate is done in two-fold:
+/// 1. Aggregate all the toml in a fused registermap.
+/// > This regmap is generated with the basename as module name.
+/// > Documetations is generated (i.e. Markdown and json)
+/// 2. Each toml regmap are generated individually
+fn main() -> std::io::Result<()> {
+    let args = Args::parse();
+    println!("User Options: {args:?}");
+
+    // Create a new Tera instances
+    // Analyse all available SystemVerilog template
+    let mut tera_sv = Tera::new("templates/**/*.sv").unwrap();
+    tera_sv.register_function("as_sv_hex", as_sv_hex);
+    // Analyse all available doc template
+    let mut tera_doc = Tera::new("templates/**/fmt_as.*").unwrap();
+    tera_doc.register_function("as_hex", as_hex);
+
+    // Ensure that output folder exist
+    std::fs::create_dir_all(&args.output_path).unwrap();
+
+    // 1. Generate the fused regmap ================================================================
+    // Expand regmap => Check properties and expand optionnal fields
+    // Parse toml files
+    let mut regmap_list = args
+        .toml_file
+        .iter()
+        .map(|toml| regmap::parser::RegmapOpt::read_from(toml))
+        .collect::<Vec<_>>();
+
+    let mut fused_regmap = regmap::Regmap::from_opt(&mut regmap_list).unwrap();
+    if args.verbose {
+        println!("{fused_regmap}");
+    }
+    // Override module_name with basename for the fused version
+    *fused_regmap.module_name_mut() = args.basename.clone();
+    generate_sv(&fused_regmap, &args.output_path, &tera_sv);
+    generate_doc(&fused_regmap, &args.output_path, &tera_doc)?;
+
+    // 2. Generate individual regmap ===============================================================
+    args.toml_file.iter().for_each(|toml| {
+        let regmap_opt = regmap::parser::RegmapOpt::read_from(toml);
+        let regmap = regmap::Regmap::from_opt(&mut [regmap_opt]).unwrap();
+        generate_sv(&regmap, &args.output_path, &tera_sv);
+    });
+
     Ok(())
 }
