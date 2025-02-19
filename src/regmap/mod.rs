@@ -1,5 +1,7 @@
 pub mod parser;
 
+use std::collections::HashSet;
+
 use indexmap::map::Iter;
 
 use getset::Getters;
@@ -529,7 +531,7 @@ pub struct Regmap {
     word_size_b: usize,
     offset: usize,
     range: usize,
-    ext_pkg: Vec<String>,
+    ext_pkg: HashSet<String>,
     section: Vec<Section>,
 }
 
@@ -576,7 +578,7 @@ impl Regmap {
             .iter()
             .flat_map(|r| &r.ext_pkg)
             .cloned()
-            .collect::<Vec<_>>();
+            .collect::<HashSet<_>>();
 
         //4. Expand regmap sections
         let mut global_section = Vec::new();
