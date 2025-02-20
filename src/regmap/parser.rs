@@ -87,7 +87,7 @@ pub struct RegmapOpt {
     pub description: String,
     pub word_size_b: usize,
     pub offset: Option<usize>,
-    pub range: Option<usize>,
+    pub range: usize,
     pub ext_pkg: Vec<String>,
     pub section: IndexMap<String, SectionOpt>,
 }

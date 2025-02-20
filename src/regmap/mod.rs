@@ -43,12 +43,22 @@ pub enum RegmapError {
         request_offset: usize,
         msg_info: String,
     },
+    #[error("Invalid range: Range must be a power of two.\n  => {msg_info}")]
+    RangePow2 { range: usize, msg_info: String },
     #[error(
         "Invalid range: [Real range: 0x{real_range:x}, Requested range: 0x{request_range:x}]\n  => {msg_info}"
     )]
     Range {
-        real_range: usize,
         request_range: usize,
+        real_range: usize,
+        msg_info: String,
+    },
+    #[error(
+        "Invalid Range: [Range: 0x{range:x}, Offset: 0x{offset:x}] must not overlaps to enable clever addr filtering.\n  => {msg_info}"
+    )]
+    OffsetRange {
+        offset: usize,
+        range: usize,
         msg_info: String,
     },
     #[error("Invalid alignement:[Word alignement: 0x{word_align}, Requested alignement: 0x{request_align}]\n  => {msg_info}")]
@@ -542,7 +552,6 @@ impl Regmap {
         if regmaps.is_empty() {
             return Err(RegmapError::NoEntry.into());
         }
-
         // -> Couldn't merge regmap with != word_size_b
         let word_size_min = regmaps
             .iter()
@@ -600,6 +609,24 @@ impl Regmap {
                 }
                 .into());
             }
+            // Check offset and range properties
+            // Those properties is used to implement clever addr filtering in regmap module
+            if !regmap.range.is_power_of_two() {
+                return Err(RegmapError::RangePow2 {
+                    range: regmap.range,
+                    msg_info: format!("{:?}", regmap),
+                }
+                .into());
+            }
+            let range_mask = regmap.range - 1;
+            if regmap_offset != (regmap_offset & !range_mask) {
+                return Err(RegmapError::OffsetRange {
+                    offset: regmap_offset,
+                    range: regmap.range,
+                    msg_info: format!("{:?}", regmap),
+                }
+                .into());
+            }
 
             // Construct section
             let section = Section::from_opt(&mut regmap.section.iter(), regmap_offset, word_bytes)?;
@@ -611,34 +638,24 @@ impl Regmap {
                 .max()
                 .unwrap_or(regmap_offset)
                 - regmap_offset;
-            let range = if let Some(request_range) = regmap.range {
-                if real_range > request_range {
-                    return Err(RegmapError::Range {
-                        request_range,
-                        real_range,
-                        msg_info: format!("{:?}", regmap),
-                    }
-                    .into());
-                } else {
-                    request_range
+            if real_range > regmap.range {
+                return Err(RegmapError::Range {
+                    request_range: regmap.range,
+                    real_range,
+                    msg_info: format!("{:?}", regmap),
                 }
-            } else {
-                real_range
-            };
+                .into());
+            }
             // Append section to global
             global_section.extend(section);
 
             // Update auto_offset for next iteration
-            auto_offset = regmap_offset + range;
+            auto_offset = regmap_offset + regmap.range;
         }
+
         // Compute range of the regmap aggregation
         // It's computed as max_addr - global_offset
-        let global_range = global_section
-            .iter()
-            .map(|s| s.offset + s.range)
-            .max()
-            .unwrap_or(global_offset)
-            - global_offset;
+        let global_range = auto_offset - global_offset;
 
         Ok(Self {
             module_name,

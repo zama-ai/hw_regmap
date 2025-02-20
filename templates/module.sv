@@ -75,8 +75,8 @@ import {{module_name}}_pkg::*;
 // ============================================================================================== --
 // localparam
 // ============================================================================================== --
-  localparam int AXI4L_ADD_OFS = {{offset}};
-  localparam int AXI4L_ADD_RANGE= {{range}};
+  localparam int AXI4L_ADD_OFS = {{as_sv_hex(val=offset)}};
+  localparam int AXI4L_ADD_RANGE= {{as_sv_hex(val=range)}};
 
 // ============================================================================================== --
 // Axi4l management

@@ -229,8 +229,9 @@ fn main() -> std::io::Result<()> {
         println!("{fused_regmap}");
     }
     // Override module_name with basename for the fused version
+    // Fused version only used to check that there is no overlapping between file and for documentation
+    // -> No SystemVerilog generated
     *fused_regmap.module_name_mut() = args.basename.clone();
-    generate_sv(&fused_regmap, &args.output_path, &tera_sv);
     generate_doc(&fused_regmap, &args.output_path, &tera_doc)?;
 
     // 2. Generate individual regmap ===============================================================
