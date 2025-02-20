@@ -6,14 +6,14 @@
 // ---------------------------------------------------------------------------------------------- //
 // xR[n]W[na]
 // |-> who is in charge of the register update logic : u -> User
-//                                                   : k -> Kernel (have a _upd signal)
+//                                                   : k -> Kernel (with an *_upd signal)
 //                                                   : p -> Parameters (i.e. constant register)
 //  | Read options
 //  | [n] optional generate read notification (have a _rd_en)
 //  | Write options
 //  | [n] optional generate wr notification (have a _wr_en)
 // 
-// Thus following type of registers:
+// Thus type of registers are:
 // uRW  : Read-write                                              
 //      : Value provided by the host. The host can read it and write it.
 // uW   : Write-only                                              
@@ -48,24 +48,24 @@ import {{module_name}}_pkg::*;
   input  logic                           s_rst_n,
 
   // Axi4 lite Slave Interface sAxi4
-  input  logic [AXI4L_ADD_W-1:0]         s_axi4l_awaddr,
-  input  logic                           s_axi4l_awvalid,
-  output logic                           s_axi4l_awready,
-  input  logic [AXI4L_DATA_W-1:0]        s_axi4l_wdata,
-  input  logic                           s_axi4l_wvalid,
-  output logic                           s_axi4l_wready,
-  output logic [1:0]                     s_axi4l_bresp,
-  output logic                           s_axi4l_bvalid,
-  input  logic                           s_axi4l_bready,
-  input  logic [AXI4L_ADD_W-1:0]         s_axi4l_araddr,
-  input  logic                           s_axi4l_arvalid,
-  output logic                           s_axi4l_arready,
-  output logic [AXI4L_DATA_W-1:0]        s_axi4l_rdata,
-  output logic [1:0]                     s_axi4l_rresp,
-  output logic                           s_axi4l_rvalid,
-  input  logic                           s_axi4l_rready,
+  input  logic [AXIL_ADD_W-1:0]         s_axil_awaddr,
+  input  logic                          s_axil_awvalid,
+  output logic                          s_axil_awready,
+  input  logic [AXIL_DATA_W-1:0]        s_axil_wdata,
+  input  logic                          s_axil_wvalid,
+  output logic                          s_axil_wready,
+  output logic [AXI4_RESP_W-1:0]        s_axil_bresp,
+  output logic                          s_axil_bvalid,
+  input  logic                          s_axil_bready,
+  input  logic [AXIL_ADD_W-1:0]         s_axil_araddr,
+  input  logic                          s_axil_arvalid,
+  output logic                          s_axil_arready,
+  output logic [AXIL_DATA_W-1:0]        s_axil_rdata,
+  output logic [AXI4_RESP_W-1:0]        s_axil_rresp,
+  output logic                          s_axil_rvalid,
+  input  logic                          s_axil_rready,
   // Registered version of wdata
-  output logic [AXI4L_DATA_W-1:0]        r_axi4l_wdata
+  output logic [AXIL_DATA_W-1:0]        r_axil_wdata
 
   {%- for reg in regs_sv -%}
   {%- if reg.io_snippets != "" -%}{{reg.io_snippets}}{%- endif -%}
@@ -75,41 +75,59 @@ import {{module_name}}_pkg::*;
 // ============================================================================================== --
 // localparam
 // ============================================================================================== --
-  localparam int AXI4L_ADD_OFS = {{as_sv_hex(val=offset)}};
-  localparam int AXI4L_ADD_RANGE= {{as_sv_hex(val=range)}};
+  localparam int AXIL_ADD_OFS = {{as_sv_hex(val=offset)}};
+  localparam int AXIL_ADD_RANGE= {{as_sv_hex(val=range)}}; // Should be a power of 2
+
+  localparam int AXIL_ADD_RANGE_W = $clog2(AXIL_ADD_RANGE);
+  localparam [AXIL_ADD_W-1:0] AXIL_ADD_RANGE_MASK = AXIL_ADD_W'(AXIL_ADD_RANGE - 1);
+  localparam [AXIL_ADD_W-1:0] AXIL_ADD_OFS_MASK   = ~(AXIL_ADD_W'(AXIL_ADD_RANGE - 1));
 
 // ============================================================================================== --
-// Axi4l management
+// axil management
 // ============================================================================================== --
-  logic                    axi4l_awready;
-  logic                    axi4l_wready;
-  logic [1:0]              axi4l_bresp;
-  logic                    axi4l_bvalid;
-  logic                    axi4l_arready;
-  logic [1:0]              axi4l_rresp;
-  logic [AXI4L_DATA_W-1:0] axi4l_rdata;
-  logic                    axi4l_rvalid;
+  logic                    axil_awready;
+  logic                    axil_wready;
+  logic [AXI4_RESP_W-1:0]  axil_bresp;
+  logic                    axil_bvalid;
+  logic                    axil_arready;
+  logic [AXI4_RESP_W-1:0]  axil_rresp;
+  logic [AXIL_DATA_W-1:0]  axil_rdata;
+  logic                    axil_rvalid;
 
-  logic                    axi4l_awreadyD;
-  logic                    axi4l_wreadyD;
-  logic [1:0]              axi4l_brespD;
-  logic                    axi4l_bvalidD;
-  logic                    axi4l_arreadyD;
-  logic [1:0]              axi4l_rrespD;
-  logic [AXI4L_DATA_W-1:0] axi4l_rdataD;
-  logic                    axi4l_rvalidD;
+  logic                    axil_awreadyD;
+  logic                    axil_wreadyD;
+  logic [AXI4_RESP_W-1:0]  axil_brespD;
+  logic                    axil_bvalidD;
+  logic                    axil_arreadyD;
+  logic [AXI4_RESP_W-1:0]  axil_rrespD;
+  logic [AXIL_DATA_W-1:0]  axil_rdataD;
+  logic                    axil_rvalidD;
 
   logic                    wr_en;
-  logic [AXI4L_ADD_W-1:0]  wr_add;
-  logic [AXI4L_DATA_W-1:0] wr_data;
+  logic [AXIL_ADD_W-1:0]   wr_add;
+  logic [AXIL_DATA_W-1:0]  wr_data;
   logic                    rd_en;
-  logic [AXI4L_ADD_W-1:0]  rd_add;
+  logic [AXIL_ADD_W-1:0]   rd_add;
 
   logic                    wr_enD;
-  logic [AXI4L_ADD_W-1:0]  wr_addD;
-  logic [AXI4L_DATA_W-1:0] wr_dataD;
+  logic [AXIL_ADD_W-1:0]   wr_addD;
+  logic [AXIL_DATA_W-1:0]  wr_dataD;
   logic                    rd_enD;
-  logic [AXI4L_ADD_W-1:0]  rd_addD;
+  logic [AXIL_ADD_W-1:0]   rd_addD;
+
+  logic                    wr_en_okD;
+  logic                    rd_en_okD;
+  logic                    wr_en_ok;
+  logic                    rd_en_ok;
+
+  //== Check address
+  // Answer all requests within [ADD_OFS -> ADD_OFS + RANGE[
+  // Since RANGE is a power of 2, this could be done with masks.
+  logic s_axil_wr_add_ok;
+  logic s_axil_rd_add_ok;
+
+  assign s_axil_wr_add_ok = (s_axil_awaddr & AXIL_ADD_OFS_MASK) == AXIL_ADD_OFS;
+  assign s_axil_rd_add_ok = (s_axil_araddr & AXIL_ADD_OFS_MASK) == AXIL_ADD_OFS;
 
   //== Local read/write signals
   // Write when address and data are available.
@@ -117,65 +135,73 @@ import {{module_name}}_pkg::*;
   // of previous request is still pending.
   // Since the ready is sent 1 cycle after the valid,
   // mask the cycle when the ready is r
-  assign wr_enD   = (s_axi4l_awvalid & s_axi4l_wvalid
-                     & ~(s_axi4l_awready | s_axi4l_wready)
-                     & ~(s_axi4l_bvalid & ~s_axi4l_bready));
-  assign wr_addD  = s_axi4l_awaddr;
-  assign wr_dataD = s_axi4l_wdata;
+  assign wr_enD   = (s_axil_awvalid & s_axil_wvalid
+                     & ~(s_axil_awready | s_axil_wready)
+                     & ~(s_axil_bvalid & ~s_axil_bready));
+  assign wr_en_okD = wr_enD & s_axil_wr_add_ok;
+  assign wr_addD  = s_axil_awaddr;
+  assign wr_dataD = s_axil_wdata;
 
   // Answer to read request 1 cycle after, when there is no pending read data.
   // Therefore, mask the rd_en during the 2nd cycle.
-  assign rd_enD   = (s_axi4l_arvalid
-                    & ~s_axi4l_arready
-                    & ~(s_axi4l_rvalid & ~s_axi4l_rready));
-  assign rd_addD  = s_axi4l_araddr;
+  assign rd_enD   = (s_axil_arvalid
+                    & ~s_axil_arready
+                    & ~(s_axil_rvalid & ~s_axil_rready));
+  assign rd_en_okD = rd_enD & s_axil_rd_add_ok;
+  assign rd_addD   = s_axil_araddr;
 
-  //== AXI4L write ready
-  assign axi4l_awreadyD = wr_enD;
-  assign axi4l_wreadyD  = wr_enD;
+  //== AXIL write ready
+  assign axil_awreadyD = wr_enD;
+  assign axil_wreadyD  = wr_enD;
 
-  //== AXI4L read address ready
-  assign axi4l_arreadyD = rd_enD;
+  //== AXIL read address ready
+  assign axil_arreadyD = rd_enD;
 
-  //== AXI4L write resp
-  logic [1:0]              axi4l_brespD_tmp;
-  assign axi4l_bvalidD    = wr_en          ? 1'b1:
-                            s_axi4l_bready ? 1'b0 : axi4l_bvalid;
-  assign axi4l_brespD     = axi4l_bvalidD ? axi4l_brespD_tmp : '0;
-  assign axi4l_brespD_tmp = (wr_add - AXI4L_ADD_OFS) < AXI4L_ADD_RANGE ? AXI4_OKAY : AXI4_SLVERR;
+  //== AXIL write resp
+  logic [AXI4_RESP_W-1:0] axil_brespD_tmp;
+  assign axil_bvalidD    = wr_en         ? 1'b1:
+                           s_axil_bready ? 1'b0 : axil_bvalid;
+  assign axil_brespD     = axil_bvalidD ? axil_brespD_tmp : '0;
+  assign axil_brespD_tmp = wr_en_ok ? AXI4_OKAY : AXI4_SLVERR;
 
-  //== AXI4L read resp
-  assign axi4l_rvalidD    = rd_en          ? 1'b1 :
-                            s_axi4l_rready ? 1'b0 : axi4l_rvalid;
+  //== AXIL read resp
+  assign axil_rvalidD    = rd_en         ? 1'b1 :
+                           s_axil_rready ? 1'b0 : axil_rvalid;
 
   always_ff @(posedge clk) begin
     if (!s_rst_n) begin
-      axi4l_awready <= 1'b0;
-      axi4l_wready  <= 1'b0;
-      axi4l_bresp   <= 2'h0;
-      axi4l_bvalid  <= 1'b0;
+      axil_awready <= 1'b0;
+      axil_wready  <= 1'b0;
+      axil_bresp   <= '0;
+      axil_bvalid  <= 1'b0;
 
-      axi4l_arready <= 1'b0;
-      axi4l_rdata   <= 'h0;
-      axi4l_rresp   <= 'h0;
-      axi4l_rvalid  <= 1'b0;
+      axil_arready <= 1'b0;
+      axil_rdata   <= '0;
+      axil_rresp   <= '0;
+      axil_rvalid  <= 1'b0;
 
-      wr_en         <= 1'b0;
-      rd_en         <= 1'b0;
+      wr_en        <= 1'b0;
+      rd_en        <= 1'b0;
+
+      wr_en_ok     <= 1'b0;
+      rd_en_ok     <= 1'b0;
     end
     else begin
-      axi4l_awready <= axi4l_awreadyD;
-      axi4l_wready  <= axi4l_wreadyD;
-      axi4l_bresp   <= axi4l_brespD;
-      axi4l_bvalid  <= axi4l_bvalidD;
+      axil_awready <= axil_awreadyD;
+      axil_wready  <= axil_wreadyD;
+      axil_bresp   <= axil_brespD;
+      axil_bvalid  <= axil_bvalidD;
 
-      axi4l_arready <= axi4l_arreadyD;
-      axi4l_rdata   <= axi4l_rdataD;
-      axi4l_rresp   <= axi4l_rrespD;
-      axi4l_rvalid  <= axi4l_rvalidD;
+      axil_arready <= axil_arreadyD;
+      axil_rdata   <= axil_rdataD;
+      axil_rresp   <= axil_rrespD;
+      axil_rvalid  <= axil_rvalidD;
 
       wr_en         <= wr_enD;
       rd_en         <= rd_enD;
+
+      wr_en_ok      <= wr_en_okD;
+      rd_en_ok      <= rd_en_okD;
     end
   end
 
@@ -186,15 +212,15 @@ import {{module_name}}_pkg::*;
   end
 
   //= Assignment
-  assign s_axi4l_awready = axi4l_awready;
-  assign s_axi4l_wready  = axi4l_wready;
-  assign s_axi4l_bresp   = axi4l_bresp;
-  assign s_axi4l_bvalid  = axi4l_bvalid;
-  assign s_axi4l_arready = axi4l_arready;
-  assign s_axi4l_rresp   = axi4l_rresp;
-  assign s_axi4l_rdata   = axi4l_rdata;
-  assign s_axi4l_rvalid  = axi4l_rvalid;
-  assign r_axi4l_wdata    = wr_data;
+  assign s_axil_awready = axil_awready;
+  assign s_axil_wready  = axil_wready;
+  assign s_axil_bresp   = axil_bresp;
+  assign s_axil_bvalid  = axil_bvalid;
+  assign s_axil_arready = axil_arready;
+  assign s_axil_rresp   = axil_rresp;
+  assign s_axil_rdata   = axil_rdata;
+  assign s_axil_rvalid  = axil_rvalid;
+  assign r_axil_wdata   = wr_data;
 
 // ============================================================================================== --
 // Default value signals
@@ -212,18 +238,26 @@ import {{module_name}}_pkg::*;
 // Read reg
 // ============================================================================================== --
   always_comb begin
-    if (axi4l_rvalid) begin
-      axi4l_rdataD = s_axi4l_rready ? '0 : axi4l_rdata;
-      axi4l_rrespD = s_axi4l_rready ? '0 : axi4l_rresp;
+    if (axil_rvalid) begin
+      axil_rdataD = s_axil_rready ? '0 : axil_rdata;
+      axil_rrespD = s_axil_rready ? '0 : axil_rresp;
     end
     else begin
-      axi4l_rdataD = axi4l_rdata;
-      axi4l_rrespD = axi4l_rresp;
+      axil_rdataD = axil_rdata;
+      axil_rrespD = axil_rresp;
       if (rd_en) begin
-        axi4l_rrespD = AXI4_SLVERR;
-        case(rd_add)
-        {%- for reg in regs_sv -%}{{reg.rd_snippets}}{% endfor %}
-        endcase // rd_add
+        if (!rd_en_ok) begin
+          axil_rdataD = REG_DATA_W'('hDEAD_ADD2);
+          axil_rrespD = AXI4_SLVERR;
+        end
+        else begin
+          axil_rrespD = AXI4_OKAY;
+          case(rd_add[AXIL_ADD_RANGE_W-1:0])
+          {%- for reg in regs_sv -%}{{reg.rd_snippets}}{% endfor %}
+          default:
+            axil_rdataD = REG_DATA_W'('h0BAD_ADD1); // Default value
+          endcase // rd_add
+        end
       end // if rd_end
     end
   end // always_comb - read
