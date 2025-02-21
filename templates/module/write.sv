@@ -6,23 +6,23 @@
 
   {%  if reg_update %}
     {%  if wr_user %}
-  assign r_{{name}}D = (wr_en_ok && (wr_add[AXIL_ADD_RANGE_W-1:0] == {{offset_cst_name}}))? wr_data: r_{{name}}_upd;
+  assign r_{{name}}D = (wr_en_ok && (wr_add[AXIL_ADD_RANGE_W-1:0] == {{offset_cst_name}}[AXIL_ADD_RANGE_W-1:0]))? wr_data: r_{{name}}_upd;
     {% else %}
   assign r_{{name}}D       = r_{{name}}_upd;
     {% endif %}
   {% else %}
     {%  if wr_user %}
-  assign r_{{name}}D = (wr_en_ok && (wr_add[AXIL_ADD_RANGE_W-1:0] == {{offset_cst_name}}))? wr_data: r_{{name}};
+  assign r_{{name}}D = (wr_en_ok && (wr_add[AXIL_ADD_RANGE_W-1:0] == {{offset_cst_name}}[AXIL_ADD_RANGE_W-1:0]))? wr_data: r_{{name}};
     {% endif %}
   {% endif %}
 
   {% if wr_notify %}
   logic r_{{name}}_wr_enD;
-  assign r_{{name}}_wr_enD = wr_en_ok && (wr_add[AXIL_ADD_RANGE_W-1:0] == {{ offset_cst_name }});
+  assign r_{{name}}_wr_enD = wr_en_ok && (wr_add[AXIL_ADD_RANGE_W-1:0] == {{ offset_cst_name }}[AXIL_ADD_RANGE_W-1:0]);
   {% endif %}
 
   {% if rd_notify %}
-  assign r_{{name}}_rd_en = rd_en_ok && (rd_add[AXIL_ADD_RANGE_W-1:0] == {{ offset_cst_name }});
+  assign r_{{name}}_rd_en = rd_en_ok && (rd_add[AXIL_ADD_RANGE_W-1:0] == {{ offset_cst_name }}[AXIL_ADD_RANGE_W-1:0]);
   assign r_{{name}} = r_{{name}}_upd;
   {% else %}
 
