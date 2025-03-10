@@ -158,11 +158,10 @@ import {{module_name}}_pkg::*;
   assign axil_arreadyD = rd_enD;
 
   //== AXIL write resp
-  logic [AXI4_RESP_W-1:0] axil_brespD_tmp;
   assign axil_bvalidD    = wr_en         ? 1'b1:
                            s_axil_bready ? 1'b0 : axil_bvalid;
-  assign axil_brespD     = axil_bvalidD ? axil_brespD_tmp : '0;
-  assign axil_brespD_tmp = wr_en_ok ? AXI4_OKAY : AXI4_SLVERR;
+  assign axil_brespD     = wr_en         ? wr_en_ok ? AXI4_OKAY : AXI4_SLVERR:
+                           s_axil_bready ? 1'b0 : axil_bresp;
 
   //== AXIL read resp
   assign axil_rvalidD    = rd_en         ? 1'b1 :
