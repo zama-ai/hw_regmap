@@ -5,7 +5,7 @@
 use getset::Getters;
 use std::collections::HashMap;
 
-#[derive(Getters)]
+#[derive(Debug, Getters)]
 #[getset(get = "pub")]
 pub struct FlatField {
     name: String,
@@ -23,6 +23,7 @@ impl std::fmt::Display for FlatField {
     }
 }
 
+#[derive(Debug)]
 pub enum Access {
     None,
     Read,
@@ -41,7 +42,7 @@ impl std::fmt::Display for Access {
     }
 }
 
-#[derive(Getters)]
+#[derive(Debug, Getters)]
 #[getset(get = "pub")]
 pub struct FlatRegister {
     // Section info
@@ -86,6 +87,31 @@ impl FlatRegister {
                 },
             )
             .collect::<HashMap<_, _>>()
+    }
+
+    pub fn from_field(&self, field: HashMap<&str, u32>) -> u32 {
+        let fields_map = self
+            .field
+            .iter()
+            .map(
+                |FlatField {
+                     name,
+                     size_b,
+                     offset_b,
+                     ..
+                 }| (name, (size_b, offset_b)),
+            )
+            .collect::<HashMap<_, _>>();
+
+        field
+            .iter()
+            .map(|(name, val)| {
+                let (size_b, offset_b) = fields_map
+                    .get(&name.to_string())
+                    .unwrap_or_else(|| panic!("Field {name} isn't available in {:?}", self));
+                (val & ((1 << *size_b) - 1)) << *offset_b
+            })
+            .sum()
     }
 }
 
