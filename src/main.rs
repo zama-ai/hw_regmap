@@ -126,7 +126,7 @@ fn generate_sv(regmap: &regmap::Regmap, output_path: &str, engine: &Tera) {
     // Expand to rtl module and store in targeted file
     let mut context = tera::Context::new();
     // Extract version from env
-    let git_version = option_env!("GIT_VERSION").unwrap_or("unknow");
+    let git_version = option_env!("GIT_VERSION").unwrap_or("unknown");
     context.insert("tool_version", git_version);
     context.insert("module_name", &regmap.module_name());
     context.insert("word_size_b", &regmap.word_size_b());
@@ -158,7 +158,7 @@ fn generate_sv(regmap: &regmap::Regmap, output_path: &str, engine: &Tera) {
     // Expand to rtl module and store in targeted file
     let mut context = tera::Context::new();
     // Extract version from env
-    let git_version = option_env!("GIT_VERSION").unwrap_or("unknow");
+    let git_version = option_env!("GIT_VERSION").unwrap_or("unknown");
     context.insert("tool_version", git_version);
     context.insert("module_name", &regmap.module_name());
     context.insert("word_size_b", &regmap.word_size_b());
@@ -185,7 +185,7 @@ fn generate_doc(regmap: &regmap::Regmap, output_path: &str, engine: &Tera) -> st
     // Expand to docs and store in targeted file
     let mut context = tera::Context::new();
     // Extract version from env
-    let git_version = option_env!("GIT_VERSION").unwrap_or("unknow");
+    let git_version = option_env!("GIT_VERSION").unwrap_or("unknown");
     context.insert("tool_version", git_version);
     context.insert("regmap", &regmap);
     let md_rendered = engine.render("docs/fmt_as.md", &context).unwrap();
@@ -216,7 +216,7 @@ fn main() -> std::io::Result<()> {
     std::fs::create_dir_all(&args.output_path).unwrap();
 
     // 1. Generate the fused regmap ================================================================
-    // Expand regmap => Check properties and expand optionnal fields
+    // Expand regmap => Check properties and expand optional fields
     // Parse toml files
     let mut regmap_list = args
         .toml_file

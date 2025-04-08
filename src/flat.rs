@@ -1,6 +1,6 @@
 //!
 //! Provide a flatten view of register map
-//! Usefull on the Sw side to easily access register with offset and decription
+//! Useful on the Sw side to easily access register with offset and description
 
 use getset::Getters;
 use std::collections::HashMap;

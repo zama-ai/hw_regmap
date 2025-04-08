@@ -9,7 +9,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use std::fs;
 
-//NB: Owner, ReadAccess, WriteAccess are splitted to ease the Serde
+// NB: Owner, ReadAccess, WriteAccess are split to ease the Serde
 //    and have a clear naming in toml without manual implementation of the serde traits
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 pub enum Owner {

@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 /// Global parsing error
-/// Descibe potential register error and imcompatible options
+/// Describe potential register error and incompatible options
 #[derive(Error, Debug, Clone)]
 pub enum RegmapError {
     #[error("Couldn't generate Regmap from empty RegmapOpt list")]
@@ -61,7 +61,7 @@ pub enum RegmapError {
         range: usize,
         msg_info: String,
     },
-    #[error("Invalid alignement:[Word alignement: 0x{word_align}, Requested alignement: 0x{request_align}]\n  => {msg_info}")]
+    #[error("Invalid alignment:[Word alignment: 0x{word_align}, Requested alignment: 0x{request_align}]\n  => {msg_info}")]
     ByteAlign {
         word_align: usize,
         request_align: usize,
@@ -259,8 +259,8 @@ impl Register {
                 (Owner::Kernel, _rd, _wr) => {}
             }
 
-            // Extract required alignement
-            // Subword alignement is not supported
+            // Extract required alignment
+            // Subword alignment is not supported
             let bytes_align = match register.bytes_align {
                 Some(align) => {
                     if (align % word_bytes) != 0 {
@@ -277,7 +277,7 @@ impl Register {
                 None => word_bytes,
             };
 
-            // Compute offset with alignement
+            // Compute offset with alignment
             let raw_offset = match register.offset {
                 Some(ofst) => ofst + section_offset,
                 None => auto_offset,
@@ -415,8 +415,8 @@ impl Section {
         let mut auto_offset = regmap_offset;
 
         for (name, section) in sections {
-            // Extract required alignement
-            // Subword alignement is not supported
+            // Extract required alignment
+            // Subword alignment is not supported
             let bytes_align = match section.bytes_align {
                 Some(align) => {
                     if (align % word_bytes) != 0 {
@@ -433,12 +433,12 @@ impl Section {
                 None => word_bytes,
             };
 
-            // Compute offset with alignement
+            // Compute offset with alignment
             let raw_offset = match section.offset {
                 Some(ofst) => ofst + regmap_offset,
                 None => auto_offset,
             };
-            // TODO should we force alignement when offset specified by user
+            // TODO should we force alignment when offset specified by user
             let mut sec_offset = align_on(bytes_align, raw_offset);
 
             // Check correctness of offset

@@ -30,7 +30,7 @@ impl SvRegister {
         context.insert("offset_cst_name", &cst_name);
         let mut dflt_name = register.default().params_list();
         // Filter duplication in param_name.
-        // NB: A parameters used by mulitple reg must appear only once at top level
+        // NB: A parameters used by multiple reg must appear only once at top level
         // -> Retain only params not already in use and update the in-use list
         dflt_name.retain(|e| !used_params.contains(e));
         used_params.extend(dflt_name.clone());
