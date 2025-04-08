@@ -4,37 +4,37 @@ module_name="Debug Offset"
 description="Simple snippets to check the offset features"
 word_size_b = 32
 offset = 0x4000
-range= 0x1000
-# -> Register only between [0x4000 -> 0x5000 [
+range= 0x2000
+# -> Register only between [0x4000 -> 0x6000 [
 ext_pkg = []
 
 # =====================================================================================================================
 [section.Params]
 description="Register that expose inner RTL parameters"
-offset= 0x1000
+offset= 0x1000 # -> 0x5000
 range=0x100
 byte_align=4
 
 [section.Params.register.ParamA]
   description="Parameter A"
+  offset=0x20 # -> 0x5020
   owner="Parameter"
   read_access="Read"
   write_access="None"
   param_name="PARAM_A"
-  offset=0x20
 
 [section.Params.register.ParamB]
   description="Parameter B"
+  offset=0x30 # -> 0x5030
   owner="Parameter"
   read_access="Read"
   write_access="None"
   param_name="PARAM_B"
-  offset=0x30
 
 # =====================================================================================================================
 [section.FreeOffset]
 description="Section with automatic offset computation"
-bytes_align=32 # -> 0x5034 -> 0x5040
+bytes_align=32 # -> [0x5100; 0x5120]
 duplicate=["_bank0","_bank1"]
 [section.FreeOffset.register.test]
   description="Dummy addr register with automatic computation offset"
@@ -47,8 +47,8 @@ duplicate=["_bank0","_bank1"]
 # =====================================================================================================================
 [section.FixOffset]
 description="Section with fixed offset"
-offset=0x2000
-bytes_align=8 # -> 0x5034 -> 0x5040
+offset=0x1800
+bytes_align=8 # -> [0x5800; 0x5808]
 duplicate=["_bank0","_bank1"]
 [section.FixOffset.register.test]
   description="Dummy addr register with fixed offset"

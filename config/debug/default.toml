@@ -4,6 +4,7 @@ module_name="debug_default"
 description="Simple register configuration to check default value"
 word_size_b = 32
 offset = 0x00
+range = 0x40
 ext_pkg = []
 
 # =====================================================================================================================
