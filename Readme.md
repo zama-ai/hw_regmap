@@ -1,4 +1,4 @@
-# Hw Regmap
+# HW Regmap
 
 This repository contains a Hardware register map generation tool.
 Based on a TOML definition, this utility could generate:
@@ -6,48 +6,47 @@ Based on a TOML definition, this utility could generate:
 * Markdown documentation
 * Runtime context for SW definition
 
-Objectives are to relax requirements on user side. When options are not specified the tool inferred them while maintaining a set of properties.
-Error in the description or properties violations (e.g. Defined register couldn't fit in the allocated range, etc.) are reported by the tool with explicit and understandable error messages.
+Objectives are to relax requirements on the user side. When options are not specified the tool infers them while maintaining a set of properties.
+Error in the description or property violations (e.g. Defined register that cannot fit in the allocated range, etc.) are reported by the tool with explicit and understandable error messages.
 
 
 ## RegisterMap definition
 Register map is described with a hierarchical structure:
 * Top-level properties
-* Sections: Gather several related register in a group
+* Sections: Gather several related registers in a group
 * Register: Define access right of a given register map word
-* Fields: Split a register in sub-field that could be accessed/updated with dedicated setter/getter.
+* Fields: Split a register in sub-fields that can be accessed/updated with dedicated setter/getter.
 
 ### RegisterMap
-Define the top-level properties of the registers map. Some fields are optional and could be automatically computed.
+Define the top-level properties of the register map. Some fields are optional and are automatically computed.
 Available properties are:
 * module_name: Name of the generated register map module
 * description: String describing the content of the register map
 * word_size_b: Word size used in the register map
 * offset: Offset of the register map inside global address map.
 * range: Range of address answered by the register map
-* ext_pkg: External SystemVerilog package required by the register map (i.e. used by constant register that exposed RTL parameters to the user)
+* ext_pkg: External SystemVerilog package required by the register map (i.e. used by constant register exposing RTL parameters to the user)
 
-Section could use `duplicate` keyword to create multiple instance with same set of registers
-
+Section can use `duplicate` keyword to create multiple instance with same set of registers
 
 ### Section
-Gather a set of register in a given section. Enable to gather meaningful register together and put them at a given offset.
+Users can gather a set of registers in a given section. Enables gathering meaningful registers together and putting them at a given offset.
 Available properties are:
 * description: String describing the content of the section
 * offset: Offset of the section in the register map
 
 ### Register
-Registers are defined with a set of Access Right that enable fine grain control of the accessibility.
+Registers are defined with a set of access rights that enable fine grain control of the accessibility.
 It's used to select the underlying SystemVerilog template and enforce properties such as Read/Write access.
 Available properties are:
 * description: String describing the content of the section
-* owner: Depicts entity that handle register update. Available options are [User, Kernel, Parameter].
-* read_access: Could this register be red from the interface, does it triggered notifications.
+* owner: Depicts entity that handles register update. Available options are [User, Kernel, Parameter].
+* read_access: Can this register be read from the interface, does it trigger notifications.
                Available options [None, Read, ReadNotify]
-* write_access: Could this register be written from the interface, does it triggered notifications
+* write_access: Can this register be written from the interface, does it triggered notifications
                Available options [None, Write, WriteNotify]
 
-Below is a register used to exposed RTL parameter to the user. This register will get its value from an RTL parameters (exposed as parameter in the SystemVerilog module) and could only be Read from the user perspective.
+Below is an example of a register used to expose an RTL parameter to the user. This register will get its value from an RTL parameter (defined as parameter in the SystemVerilog module) and could only be Read from the user perspective.
 ``` toml 
 [section.RtlProperties.register.Version]
   description="Version of the current HW"
@@ -56,7 +55,7 @@ Below is a register used to exposed RTL parameter to the user. This register wil
   write_access="None"
 ```
 
-Below is a register used to retrieved runtime configuration from the user. It could be Read and write from a user perspective. On Write, the RTL is notified to handle internal update
+Below is an example of a register used to retrieve runtime configuration from the user. It can be read and written from a user perspective. On write, the RTL is notified to handle internal update
 ``` toml 
 [section.RtlProperties.register.Version]
   description="Wrapping value of the timeout counter"
@@ -65,7 +64,7 @@ Below is a register used to retrieved runtime configuration from the user. It co
   write_access="WriteNotify"
 ```
 
-Below is a register used to expose performance value to the user.
+Below is a example of a register used to expose performance value to the user.
 It is updated by the RTL and reset upon read by the user.
 ``` toml 
 [section.RtlProperties.register.Version]
@@ -75,17 +74,17 @@ It is updated by the RTL and reset upon read by the user.
   write_access="None"
 ```
 
-Register could use `duplicate` keyword to create multiple instance with same properties.
+Register can use the `duplicate` keyword to create multiple instances with the same properties.
 
 ### Fields
-Register could be composed of sub-fields. A set of function are available to retrieved/update register with a field aware method.
+Registers can be composed of sub-fields. A set of functions is available to retrieve/update registers with a field aware method.
 Available properties are:
 * name: Name of the field
 * size_b: Number of bits used by the field
 * offset_b: Offset in bits within the register word
 * default: Specify default value after a reset. Could use a constant value or an RTL parameters
 
-Below a version register content is depicts with 3 fields:
+Below a version register content is divided in 3 fields:
 ``` toml 
 [section.RtlProperties.register.Version]
   description="Version of the current HW"
@@ -98,15 +97,15 @@ Below a version register content is depicts with 3 fields:
 ```
 
 ## SystemVerilog registers
-The TOML register map is parsed, missing optional filed are computed and a set of properties are checked.
+To generate RTL sources, the TOML register map is parsed, missing optional fields are computed and a set of properties is checked.
 A concrete register map is then built in memory and a set of [Tera](https://github.com/Keats/tera) templates are used to convert it in a SystemVerilog description.
-The set of provided Tera template could be easily edited by the user to adapt the generated construct to specific application needs.
+The set of provided Tera templates can be easily edited by the user to adapt the generated construct to specific application needs.
 
 ## Runtime context
 This repository could be used as an external library. It enables Software to digest the register map definition and provide a flat-map view of it for easy `Register` to `Address` translation.
-By this way, same TOML description could be used for RTL generation and inside SW driver.
+This way, the same TOML description can be used for RTL generation and inside SW driver.
 
-From an SW perspective, the TOML definition could be parsed in a flat hash table that enable to get register content from a name.
+From an SW perspective, the TOML definition can be parsed in a flat hash table that enables SW to get register content from a name.
 
 ``` rust
 // ~~ ---
@@ -126,20 +125,20 @@ let minor_version = *fields.get("minor").expect("Unknown field");
 The config folder contains some examples that show register map capabilities.
 
 ### Base
-Simple example that show available syntax flavors. It generates a monolithic register map.
+Simple example that shows available syntax flavors. It generates a monolithic register map.
 ``` bash
 cargo run -- --output-path gen --toml-file config/example.toml
 ```
 
 ### Debug offset 
-Simple example that depicts offset feature. Offset could be fixed or computed by the tool.
+Simple example that depicts offset features. Offset can be fixed or computed by the tool.
 ``` bash
 cargo run -- --output-path gen --toml-file config/debug/offset.toml
 ```
 
 ### Multi-regmap
-Simple example that depicts the multi-regmap capabilities. Register map could be generated in multiple module to ease RTL Place and Route.
-Tool enforce the overall coherence of the generated address while generating multiple RTL modules.
+Simple example that depicts the multi-regmap capabilities. Register map can be generated in multiple modules to ease RTL place and route.
+The tool enforces the overall coherency of the generated addresses while generating multiple RTL modules.
 ``` bash
 cargo run -- --output-path gen --toml-file config/debug/many/slice_a.toml --toml-file config/debug/many/slice_b.toml
 ```
