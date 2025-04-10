@@ -13,7 +13,8 @@ ext_pkg = []
 description="Register that expose inner RTL parameters"
 offset= 0x1000 # -> 0x5000
 range=0x100
-byte_align=4
+bytes_align=4
+duplicate=["_dup1", "_dup2"]
 
 [section.Params.register.ParamA]
   description="Parameter A"

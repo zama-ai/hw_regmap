@@ -13,7 +13,7 @@ ext_pkg = ["global_common_pkg"]
 description="Register that expose inner RTL parameters"
 offset= 0x100
 range=0x100
-byte_align=4
+bytes_align=4
 
 [section.ParamsA.register.ParamA]
   description="Parameter A"
