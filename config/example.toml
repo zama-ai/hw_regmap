@@ -124,9 +124,9 @@ offset= 0x10
   read_access="Read"
   write_access="None"
   field.alu_nb =          { size_b=8, offset_b=24 , default={Param="PEA_ALU_NB"}, description="Number of coefficients processed in parallel in pe_alu"}
-  field.pep_regf_period = { size_b=8, offset_b=16 , default={Param="PEP_REGF_PERIOD"}, description="Number of cycles between 2 consecutive data transfert between PEP and regfile"}
-  field.pem_regf_period = { size_b=8, offset_b=8 ,  default={Param="PEM_REGF_PERIOD"}, description="Number of cycles between 2 consecutive data transfert between PEM and regfile"}
-  field.pea_regf_period = { size_b=8, offset_b=0 ,  default={Param="PEA_REGF_PERIOD"}, description="Number of cycles between 2 consecutive data transfert between PEA and regfile"}
+  field.pep_regf_period = { size_b=8, offset_b=16 , default={Param="PEP_REGF_PERIOD"}, description="Number of cycles between 2 consecutive data transfer between PEP and regfile"}
+  field.pem_regf_period = { size_b=8, offset_b=8 ,  default={Param="PEM_REGF_PERIOD"}, description="Number of cycles between 2 consecutive data transfer between PEM and regfile"}
+  field.pea_regf_period = { size_b=8, offset_b=0 ,  default={Param="PEA_REGF_PERIOD"}, description="Number of cycles between 2 consecutive data transfer between PEA and regfile"}
 
 [section.Info.register.HbmPc]
   description="HBM pseudo channel properties"
@@ -271,7 +271,7 @@ offset= 0x800
 
 # =====================================================================================================================
 [section.Runtime]
-description="Contains all runtimes informations exposed by the RTL"
+description="Contains all runtimes information exposed by the RTL"
 offset= 0x1000
 
 [section.Runtime.register.errors]
@@ -282,7 +282,7 @@ offset= 0x1000
   field.pbs   = { size_b=13, offset_b=0 , default={Cst=0}, description="HPU error"}
 
 [section.Runtime.register.infos_loop]
-  description="Informations register : iteration loop"
+  description="Information register : iteration loop"
   owner="Kernel"
   read_access="Read"
   write_access="None"
@@ -292,7 +292,7 @@ offset= 0x1000
   field.ks_loop_c = { size_b=1,  offset_b=31 , default={Cst=0}, description="KS current KS-loop parity"}
 
 [section.Runtime.register.infos_pointer0]
-  description="Informations register : PEP pointers 0"
+  description="Information register : PEP pointers 0"
   owner="Kernel"
   read_access="Read"
   write_access="None"
@@ -302,7 +302,7 @@ offset= 0x1000
   field.ldb_pt  = { size_b=8, offset_b=24 , default={Cst=0}, description="PEP ldb_pt"}
 
 [section.Runtime.register.infos_pointer1]
-  description="Informations register : PEP pointers 1"
+  description="Information register : PEP pointers 1"
   owner="Kernel"
   read_access="Read"
   write_access="None"
@@ -312,7 +312,7 @@ offset= 0x1000
   field.ks_out_wp = { size_b=8, offset_b=24 , default={Cst=0}, description="PEP ks_out_wp"}
 
 [section.Runtime.register.infos_pointer2]
-  description="Informations register : PEP pointers 2"
+  description="Information register : PEP pointers 2"
   owner="Kernel"
   read_access="Read"
   write_access="None"

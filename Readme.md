@@ -25,7 +25,7 @@ Register map is described with a hierarchical structure:
  * Define access rights, and characteristics
 * Fields
  * Optional
- * Multiplie within a register
+ * Multiply within a register
  * Fields of the register word.
  * Define characteristics
 
@@ -122,7 +122,7 @@ Example: register describing the HW version, seen as composed by 3 fields:
 ```
 
 ## SystemVerilog registers
-To generate RTL sources, the TOML register map is parsed by the tool. Missing optional fields are computed. The defined and infered values are checked in compliance with a set of properties.
+To generate RTL sources, the TOML register map is parsed by the tool. Missing optional fields are computed. The defined and inferred values are checked in compliance with a set of properties.
 A concrete register map is then built in memory and a set of [Tera](https://github.com/Keats/tera) templates are used to convert it in a SystemVerilog description.
 The set of provided Tera templates can be easily edited by the user to adapt the generated construct to specific application needs.
 
