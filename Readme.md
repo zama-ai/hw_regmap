@@ -31,34 +31,37 @@ Register map is described with a hierarchical structure:
 
 ### Header
 Define the general properties of the register map. Some entries are optional and are automatically computed.
-Available properties are: #JJ# : which one is optional ?
+Available properties are:
 * module_name: Name of the generated register map RTL module
 * description: String describing the content of the register map
 * word_size_b: Word size used in the register map (bit-unit)
-* offset: Offset of the register map inside the global address map (byte-unit)
+* offset: Offset of the register map inside the global address map (byte-unit) [Optional][Default `0`]
 * range: Range of addresses answered by the register map (byte-unit)
 * ext_pkg: List of external SystemVerilog packages required by the register map RTL module (ex. package describing the AXI4-lite bus)
 
 ### Section
 Registers are organized in sections. A section gathers sensible registers together, at a given address offset.
-Available properties are: #JJ# : which one is optional ?
+Available properties are:
 * description: String describing the content of the section
-* offset: Offset of the section in the register map (byte-unit)
-* duplicate: (opt) Multiple instances with same set of registers. The argument is a list of suffix to be applied on the section name.
+* offset: Offset of the section in the register map (byte-unit) [Optional][Default `automatic`]
+* range: Range of addresses covered by the section (byte-unit) [Optional][Default `automatic`]
+* bytes_align: Required address alignment for the section (byte-unit) [Optional][Default `automatic`]
+* duplicate: Multiple instances with same set of registers. The argument is a list of suffix to be applied on the section name [Optional][Default `None`]
 
 
 ### Register
 Fine control of register read/write access is possible. Corresponding SystemVerilog code is implemented.
-Available properties are: #JJ# : which one is optional ?
+Available properties are:
 * description: String describing the content of the register
 * owner: Entity that handles physical register update. Available options are [User, Kernel, Parameter].
 * read_access: Read access properties: availability, HW notification if reading.
                Available options [None, Read, ReadNotify]
 * write_access: Write access properties: availability, HW notification if writing.
                Available options [None, Write, WriteNotify]
-* default: (opt) Default value at reset. If the register stores a constant, the format is {Cst=<val>}. If the value comes from a systemVerilog parameter, the format is {Param="<param_name>"}. Note that if not used, the default value is 0.
-* duplicate: (opt) Multiple instances of this register. The argument is a list of suffix to be applied on the register name.
-
+* default: Default value at reset. If the register stores a constant, the format is {Cst=<val>}. If the value comes from a systemVerilog parameter, the format is {Param="<param_name>"}. Note that if not used, the default value is 0. [Optional][Default `{Cst=0}`]
+* bytes_align: Required address alignment for the register (byte-unit) [Optional][Default `automatic`]
+* offset: Offset of the register in the section (byte-unit) [Optional][Default `automatic`]
+* duplicate: Multiple instances of this register. The argument is a list of suffix to be applied on the register name [Optional][Default None]
 
 Example 1: register exposing a RTL parameter to the user.
 * This register is read only.
@@ -103,8 +106,8 @@ A Register can be composed of several fields. A set of functions is available to
 A field has a name.
 Available field properties are:
 * size_b: Number of bits used by the field (bit-unit)
-* offset_b: Offset within the register word (bit-unit)
-* default: Specify default value after a reset. Could use a constant value or a RTL parameter. (same syntax as register default property)
+* offset_b: Offset within the register word (bit-unit) [Optional][Default `automatic`]
+* default: Specify default value after a reset. Could use a constant value or a RTL parameter. (same syntax as register default property) [Optional][Default `{Cst=0}`]
 
 Example: register describing the HW version, seen as composed by 3 fields:
 ``` toml 
