@@ -2,6 +2,12 @@
 name = "hw_regmap"
 version = "0.1.0"
 edition = "2021"
+homepage = "https://zama.ai/"
+repository = "https://github.com/zama-ai/hw_regmap"
+readme = "Readme.md"
+license = "BSD-3-Clause-Clear"
+description = "hw_regmap: A register map generation tool."
+rust-version = "1.84"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
