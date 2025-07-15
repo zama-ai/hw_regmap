@@ -24,6 +24,7 @@
   {% if rd_notify %}
   assign r_{{name}}_rd_en = rd_en_ok && (rd_add[AXIL_ADD_RANGE_W-1:0] == {{ offset_cst_name }}[AXIL_ADD_RANGE_W-1:0]);
   assign r_{{name}} = r_{{name}}_upd;
+  {% if wr_notify %}assign r_{{name}}_wr_en = r_{{name}}_wr_enD;{% endif %}
   {% else %}
 
   always_ff @(posedge clk) begin
