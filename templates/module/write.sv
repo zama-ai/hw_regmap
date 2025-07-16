@@ -21,20 +21,27 @@
   assign r_{{name}}_wr_enD = wr_en_ok && (wr_add[AXIL_ADD_RANGE_W-1:0] == {{ offset_cst_name }}[AXIL_ADD_RANGE_W-1:0]);
   {% endif %}
 
-  {% if rd_notify %}
-  assign r_{{name}}_rd_en = rd_en_ok && (rd_add[AXIL_ADD_RANGE_W-1:0] == {{ offset_cst_name }}[AXIL_ADD_RANGE_W-1:0]);
-  assign r_{{name}} = r_{{name}}_upd;
-  {% if wr_notify %}assign r_{{name}}_wr_en = r_{{name}}_wr_enD;{% endif %}
-  {% else %}
-
+  {% if wr_notify %}
   always_ff @(posedge clk) begin
     if (!s_rst_n) begin
-      r_{{name}}       <= {{name}}_default;
       {% if wr_notify %}r_{{name}}_wr_en <= 1'b0;{% endif %}
     end
     else begin
-      r_{{name}}       <= r_{{name}}D;
       {% if wr_notify %}r_{{name}}_wr_en <= r_{{name}}_wr_enD;{% endif %}
+    end
+  end
+  {% endif %}
+
+  {% if rd_notify %}
+  assign r_{{name}}_rd_en = rd_en_ok && (rd_add[AXIL_ADD_RANGE_W-1:0] == {{ offset_cst_name }}[AXIL_ADD_RANGE_W-1:0]);
+  assign r_{{name}} = r_{{name}}_upd;
+  {% else %}
+  always_ff @(posedge clk) begin
+    if (!s_rst_n) begin
+      r_{{name}}       <= {{name}}_default;
+    end
+    else begin
+      r_{{name}}       <= r_{{name}}D;
     end
   end
   {% endif %}
