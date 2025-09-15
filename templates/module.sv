@@ -45,7 +45,7 @@ import {{module_name}}_pkg::*;
   {%- endif -%}
   {%- endfor -%})(
   input  logic                           clk,
-  input  logic                           s_rst_n,
+  input  logic                           a_rst_n,
 
   // Axi4 lite Slave Interface sAxi4
   input  logic [AXIL_ADD_W-1:0]         s_axil_awaddr,
@@ -167,8 +167,8 @@ import {{module_name}}_pkg::*;
   assign axil_rvalidD    = rd_en         ? 1'b1 :
                            s_axil_rready ? 1'b0 : axil_rvalid;
 
-  always_ff @(posedge clk) begin
-    if (!s_rst_n) begin
+  `ALWAYS_FF(clk, a_rst_n)
+    if (!a_rst_n) begin
       axil_awready <= 1'b0;
       axil_wready  <= 1'b0;
       axil_bresp   <= '0;
