@@ -166,4 +166,39 @@ Example demonstrating the multi-regmap capability. Register map can be split int
 The tool enforces the overall coherency of the generated addresses while generating multiple RTL modules.
 ``` bash
 cargo run -- --output-path gen --toml-file config/debug/many/slice_a.toml --toml-file config/debug/many/slice_b.toml
-```
+```  # HW Regmap
+
+This repository contains a Hardware register map generation tool.  
+Based on a TOML definition, this utility generates:
+* **SystemVerilog** RTL module containing the registers
+* **Markdown** documentation
+* **Runtime context** for software definition
+
+The main purpose is to ease the user experience on writing and using a register map.  
+For example, inference—respecting a set of properties—is applied when an option is not specified.  
+Property violations are reported by the tool with explicit and understandable error messages.
+
+---
+
+## Features at a Glance
+* **Single Source of Truth** – Define your register map once in TOML and reuse it for RTL, documentation, and software.
+* **Inference & Validation** – Automatically compute missing values and check compliance with alignment, offset, and access constraints.
+* **Template-Based Generation** – Uses [Tera](https://github.com/Keats/tera) templates for flexible SystemVerilog output.
+* **Runtime Integration** – Directly parse TOML in software for register/field-level access.
+
+---
+
+## Installation
+
+The tool is written in Rust and uses Cargo for building and running.
+
+### Prerequisites
+* [Rust](https://www.rust-lang.org/tools/install) (latest stable recommended)
+* Cargo (included with Rust)
+
+### Build from Source
+```bash
+git clone https://github.com/<your-org>/hw-regmap.git
+cd hw-regmap
+cargo build --release
+
