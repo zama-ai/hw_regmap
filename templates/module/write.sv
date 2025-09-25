@@ -22,7 +22,7 @@
   {% endif %}
 
   {% if wr_notify %}
-  `ALWAYS_FF (clk, a_rst_n)
+  `ALWAYS_FF (clk, a_rst_n) begin
     if (!a_rst_n) begin
       {% if wr_notify %}r_{{name}}_wr_en <= 1'b0;{% endif %}
     end

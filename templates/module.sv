@@ -167,7 +167,7 @@ import {{module_name}}_pkg::*;
   assign axil_rvalidD    = rd_en         ? 1'b1 :
                            s_axil_rready ? 1'b0 : axil_rvalid;
 
-  `ALWAYS_FF(clk, a_rst_n)
+  `ALWAYS_FF(clk, a_rst_n) begin
     if (!a_rst_n) begin
       axil_awready <= 1'b0;
       axil_wready  <= 1'b0;
