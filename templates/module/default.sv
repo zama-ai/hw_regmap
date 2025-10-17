@@ -1,7 +1,7 @@
 {# Template for generating default signals #}
 {# Warn: Keep indentation in phase with module template (cf. default_snippets) #}
 
-{# Not a map, but it's the way to match on enum in tera #} 
+{# Not a map, but it's the way to match on enum in tera #}
 {%for type,val in default_val %}
 //-- Default {{name}}
 {%if type is containing("ParamsField") %}

@@ -1,14 +1,14 @@
 # {{regmap.module_name | upper }} documentation
-**Date**: {{ now() | date(format="%Y-%m-%d") }}  
-**Tool Version**: {{ tool_version }}  
+**Date**: {{ now() | date(format="%Y-%m-%d") }}
+**Tool Version**: {{ tool_version }}
 
 ## RegisterMap Overview
 
-**Module Name**: {{ regmap.module_name }}  
-**Description**: {{ regmap.description }}  
-**Offset**: {{ as_hex(val=regmap.offset )}} 
+**Module Name**: {{ regmap.module_name }}
+**Description**: {{ regmap.description }}
+**Offset**: {{ as_hex(val=regmap.offset )}}
 **Range**: {{ as_hex(val=regmap.range) }}
-**Word Size (b)**: {{ regmap.word_size_b }}  
+**Word Size (b)**: {{ regmap.word_size_b }}
 **External Packages**: {%for pkg in regmap.ext_pkg%}"{{pkg}}.sv"{%- if not loop.last %},{% endif -%}{%endfor%}
 
 
@@ -51,7 +51,7 @@ Below is a summary of all the registers in the current section {{section.name}}:
 - **Read Access**: {{ register.read_access }}
 - **Write Access**: {{ register.write_access }}
 - **Offset**: {{ as_hex(val=register.offset) }}
-- **Default**: {%for k,v in register.default %}{%if v is object %}C.f. fields{%else%}{{v}}{%endif%}{%- if not loop.last %}, {% endif -%}{%endfor%} 
+- **Default**: {%for k,v in register.default %}{%if v is object %}C.f. fields{%else%}{{v}}{%endif%}{%- if not loop.last %}, {% endif -%}{%endfor%}
 
 {% if register.field %}
 #### Field Details
