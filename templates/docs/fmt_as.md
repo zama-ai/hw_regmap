@@ -68,6 +68,6 @@ Register {{ register.name }} contains following Sub-fields:
 
 ---
 
-{% endfor %} {# Register loop #}
+{% endfor %}{# Register loop #}
 
-{% endfor %} {# Section loop #}
+{% endfor %}{# Section loop #}
