@@ -118,6 +118,8 @@ impl FlatRegister {
 #[derive(Getters)]
 #[getset(get = "pub")]
 pub struct FlatRegmap {
+    offset: usize,
+    range: usize,
     register: HashMap<String, FlatRegister>,
 }
 impl std::fmt::Display for FlatRegmap {
@@ -182,6 +184,10 @@ impl FlatRegmap {
                 );
             });
         });
-        Self { register }
+        Self {
+            register,
+            offset: *regmap.offset(),
+            range: *regmap.range(),
+        }
     }
 }
