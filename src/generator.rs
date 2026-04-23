@@ -1,7 +1,11 @@
+use std::default;
+
 use tera::Tera;
 
 use super::regmap::parser::{Owner, ReadAccess, WriteAccess};
+use super::regmap::Section;
 use super::regmap::Register;
+use super::regmap::Field;
 
 use serde::{Deserialize, Serialize};
 
@@ -153,4 +157,116 @@ impl SvRegisterPkg {
             struct_snippets,
         }
     }
+}
+
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct SvRalSection {
+    name: String,
+    sctd_snippet: String,
+    offset : String
+}
+
+impl SvRalSection {
+    pub fn from_section(
+        section: &Section,
+        tera: &Tera,
+    ) -> Self {
+        let mut context = tera::Context::new();
+        let sct_name = format!("{}", section.name()).to_lowercase();
+        let mut registers = Vec::new();
+        context.insert("section_name", &sct_name);
+        for r in section.register(){
+            registers.push(r);
+        }
+        context.insert("registers", &registers);
+        let sctd_snippet = tera.render("ral/ral_sct_dclr.sv", &context).unwrap();
+
+        Self { name: sct_name
+             , sctd_snippet: sctd_snippet
+             , offset: format!("{:x}", section.offset())
+             }
+    }
+}
+
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct SvRalReg {
+    name: String,
+    regd_snippet: String,
+    offset : String
+}
+
+
+impl SvRalReg {
+    pub fn from_register(
+        register: &Register,
+        tera: &Tera,
+    ) -> Self {
+        let mut context = tera::Context::new();
+        let reg_name = format!("{}", register.name().to_lowercase());
+        context.insert("reg_name", &reg_name);
+
+        let mut sv_fields = Vec::new();
+        if let Some(fields) = register.field() {
+            for f in fields {
+                sv_fields.push(SvRalField::from_field( f ) );
+            }
+        }
+        else {
+            sv_fields.push(
+                SvRalField{
+                    name: format!("{}", reg_name),
+                    ..Default::default()
+                }
+             );
+        }
+        context.insert("sv_fields", &sv_fields);
+
+        let regd_snippet = tera.render("ral/ral_reg_dclr.sv", &context).unwrap();
+        Self {
+            name: reg_name,
+            regd_snippet: regd_snippet,
+            offset: format!("{:x}", register.offset()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct SvRalField{
+    name: String,
+    size: String,
+    lsb_pos: String,
+    access: String,
+    volatile: String,
+    reset: String,
+    has_reset: String,
+    is_rand: String,
+    individually_accessible: String,
+}
+
+impl SvRalField {
+    pub fn from_field(
+        field: &Field,
+    ) -> Self {
+        Self {
+            name: field.name().clone(),
+            size: format!("{}", field.size_b()),
+            lsb_pos: format!("{}",field.offset_b()),
+            ..Default::default()
+        }
+    }
+}
+impl Default for SvRalField {
+    fn default() -> Self{
+        Self { name: String::new(),
+            size: String::from("32"),
+            lsb_pos: String::from("0"),
+            access: String::from("RW"),
+            volatile: String::from("0"),
+            reset: String::from("32'h0"),
+            has_reset: String::from("1"),
+            is_rand: String::from("1"),
+            individually_accessible: String::from("0"), }
+        }
 }
