@@ -194,6 +194,36 @@ fn generate_doc(regmap: &regmap::Regmap, output_path: &str, engine: &Tera) -> st
     Ok(())
 }
 
+fn generate_ral(regmap: &regmap::Regmap, output_path: &str, engine: &Tera) {
+    // Generate ral package  ==================================================
+    let ral_pkg = format!("{}/{}_ral_pkg.sv", output_path, regmap.module_name());
+    let mut ral_regs = Vec::new();
+    let mut ral_scts = Vec::new();
+
+    regmap.section().iter().for_each(|sec| {
+        ral_scts.push(generator::SvRalSection::from_section(
+            sec,
+            engine,
+        ));
+        sec.register().iter().for_each(|reg| {
+            ral_regs.push(generator::SvRalReg::from_register(
+                reg,
+                engine,
+            ));
+        })
+    });
+
+    let mut context = tera::Context::new();
+    context.insert("module_name", &regmap.module_name());
+    context.insert("ral_regs", &ral_regs);
+    context.insert("ral_scts", &ral_scts);
+
+    // Convert regmap in rtl snippets based on Tera
+    let ral_rendered = engine.render("ral/ral_pkg.sv", &context).unwrap();
+    std::fs::write(&ral_pkg, ral_rendered)
+        .unwrap_or_else(|_| panic!("Unable to write file {ral_pkg}"));
+}
+
 /// Parse user ClI
 /// Generate is done in two-fold:
 /// 1. Aggregate all the toml in a fused registermap.
@@ -239,6 +269,7 @@ fn main() -> std::io::Result<()> {
         let regmap_opt = regmap::parser::RegmapOpt::read_from(toml);
         let regmap = regmap::Regmap::from_opt(&mut [regmap_opt]).unwrap();
         generate_sv(&regmap, &args.output_path, &tera_sv);
+        generate_ral(&regmap, &args.output_path, &tera_sv);
     });
 
     Ok(())
