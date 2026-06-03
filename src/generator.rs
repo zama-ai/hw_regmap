@@ -6,6 +6,7 @@ use super::regmap::parser::{Owner, ReadAccess, WriteAccess};
 use super::regmap::Section;
 use super::regmap::Register;
 use super::regmap::Field;
+use super::regmap::DefaultVal;
 
 use serde::{Deserialize, Serialize};
 
@@ -180,6 +181,7 @@ impl SvRalSection {
             registers.push(r);
         }
         context.insert("registers", &registers);
+        context.insert("section", &section);
         let sctd_snippet = tera.render("ral/ral_sct_dclr.sv", &context).unwrap();
 
         Self { name: sct_name
@@ -200,11 +202,12 @@ pub struct SvRalReg {
 
 impl SvRalReg {
     pub fn from_register(
+        section: &Section,
         register: &Register,
         tera: &Tera,
     ) -> Self {
         let mut context = tera::Context::new();
-        let reg_name = format!("{}", register.name().to_lowercase());
+        let reg_name = format!("{}_{}", section.name().to_lowercase(), register.name().to_lowercase());
         context.insert("reg_name", &reg_name);
 
         let mut sv_fields = Vec::new();
@@ -217,6 +220,15 @@ impl SvRalReg {
             sv_fields.push(
                 SvRalField{
                     name: format!("{}", reg_name),
+                    reset: Some(register.default().clone()),
+                    access: match (register.read_access(), register.write_access()) {
+                      (ReadAccess::Read, WriteAccess::Write) => SvRAlAccess::RW,
+                      (ReadAccess::None, WriteAccess::Write) => SvRAlAccess::WO,
+                      (ReadAccess::Read, WriteAccess::None)  => SvRAlAccess::RO,
+                      (ReadAccess::None, WriteAccess::None)  => panic!("Can't have unaccessible registers"),
+                      (_, WriteAccess::WriteNotify) => SvRAlAccess::RW,//todo!("WriteNotify not yet implemented"),
+                      (ReadAccess::ReadNotify, _) => SvRAlAccess::RW,//todo!("ReadNotify not yet implemented"),
+                    },
                     ..Default::default()
                 }
              );
@@ -233,16 +245,76 @@ impl SvRalReg {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+pub enum SvRAlAccess{
+  RO,
+  RW,
+  RC,
+  RS,
+  WRC,
+  WRS,
+  WC,
+  WS,
+  WSRC,
+  WCRS,
+  W1C,
+  W1S,
+  W1T,
+  W0C,
+  W0S,
+  W0T,
+  W1SRC,
+  W1CRS,
+  W0SRC,
+  W0CRS,
+  WO,
+  WOC,
+  WOS,
+  W1,
+  WO1,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SvRalField{
     name: String,
     size: String,
     lsb_pos: String,
-    access: String,
+    access: SvRAlAccess,
     volatile: String,
-    reset: String,
-    has_reset: String,
+    reset: Option<DefaultVal>,
     is_rand: String,
     individually_accessible: String,
+}
+
+impl SvRAlAccess {
+  fn as_str(&self) -> &'static str {
+    match self {
+      SvRAlAccess::RO    => "RO",
+      SvRAlAccess::RW    => "RW",
+      SvRAlAccess::RC    => "RC",
+      SvRAlAccess::RS    => "RS",
+      SvRAlAccess::WRC   => "WRC",
+      SvRAlAccess::WRS   => "WRS",
+      SvRAlAccess::WC    => "WC",
+      SvRAlAccess::WS    => "WS",
+      SvRAlAccess::WSRC  => "WSRC",
+      SvRAlAccess::WCRS  => "WCRS",
+      SvRAlAccess::W1C   => "W1C",
+      SvRAlAccess::W1S   => "W1S",
+      SvRAlAccess::W1T   => "W1T",
+      SvRAlAccess::W0C   => "W0C",
+      SvRAlAccess::W0S   => "W0S",
+      SvRAlAccess::W0T   => "W0T",
+      SvRAlAccess::W1SRC => "W1SRC",
+      SvRAlAccess::W1CRS => "W1CRS",
+      SvRAlAccess::W0SRC => "W0SRC",
+      SvRAlAccess::W0CRS => "W0CRS",
+      SvRAlAccess::WO    => "WO",
+      SvRAlAccess::WOC   => "WOC",
+      SvRAlAccess::WOS   => "WOS",
+      SvRAlAccess::W1    => "W1",
+      SvRAlAccess::WO1   => "WO1",
+    }
+  }
 }
 
 impl SvRalField {
@@ -253,6 +325,15 @@ impl SvRalField {
             name: field.name().clone(),
             size: format!("{}", field.size_b()),
             lsb_pos: format!("{}",field.offset_b()),
+            reset: field.default().clone(),
+            access: match (field.read_access(), field.write_access()) {
+              (ReadAccess::Read, WriteAccess::Write) => SvRAlAccess::RW,
+              (ReadAccess::None, WriteAccess::Write) => SvRAlAccess::WO,
+              (ReadAccess::Read, WriteAccess::None)  => SvRAlAccess::RO,
+              (ReadAccess::None, WriteAccess::None)  => panic!("Can't have unaccessible registers"),
+              (_, WriteAccess::WriteNotify) => SvRAlAccess::RW,//todo!("WriteNotify not yet implemented"),
+              (ReadAccess::ReadNotify, _) => SvRAlAccess::RW,//todo!("ReadNotify not yet implemented"),
+            },
             ..Default::default()
         }
     }
@@ -262,11 +343,10 @@ impl Default for SvRalField {
         Self { name: String::new(),
             size: String::from("32"),
             lsb_pos: String::from("0"),
-            access: String::from("RW"),
+            access: SvRAlAccess::RW,
             volatile: String::from("0"),
-            reset: String::from("32'h0"),
-            has_reset: String::from("1"),
             is_rand: String::from("1"),
+            reset: None,
             individually_accessible: String::from("0"), }
         }
 }

@@ -32,7 +32,15 @@ impl ReadAccess {
             Self::Read | Self::ReadNotify => true,
         }
     }
+    pub fn as_str(&self) -> &'static str {
+      match self {
+        ReadAccess::None       => "None",
+        ReadAccess::Read       => "Read",
+        ReadAccess::ReadNotify => "ReadNotify",
+      }
+    }
 }
+
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 pub enum WriteAccess {
@@ -48,6 +56,13 @@ impl WriteAccess {
             Self::Write | Self::WriteNotify => true,
         }
     }
+    pub fn as_str(&self) -> &'static str {
+      match self {
+        WriteAccess::None        => "None",
+        WriteAccess::Write       => "Write",
+        WriteAccess::WriteNotify => "WriteNotify",
+      }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -56,6 +71,8 @@ pub struct FieldOpt {
     pub size_b: usize,
     pub offset_b: Option<usize>,
     pub default: Option<DefaultVal>,
+    pub read_access: Option<ReadAccess>,
+    pub write_access: Option<WriteAccess>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
