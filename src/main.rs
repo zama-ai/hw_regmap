@@ -24,6 +24,10 @@ pub struct Args {
     #[clap(long, value_parser, default_value = "regmap")]
     basename: String,
 
+    // Generate only UVM files
+    #[clap(long, value_parser)]
+    uvm_only: bool,
+
     // Debug options ----------------------------------------------------------
     /// Enable verbosity
     #[clap(long, value_parser)]
@@ -207,6 +211,7 @@ fn generate_ral(regmap: &regmap::Regmap, output_path: &str, engine: &Tera) {
         ));
         sec.register().iter().for_each(|reg| {
             ral_regs.push(generator::SvRalReg::from_register(
+                sec,
                 reg,
                 engine,
             ));
@@ -268,7 +273,9 @@ fn main() -> std::io::Result<()> {
     args.toml_file.iter().for_each(|toml| {
         let regmap_opt = regmap::parser::RegmapOpt::read_from(toml);
         let regmap = regmap::Regmap::from_opt(&mut [regmap_opt]).unwrap();
-        generate_sv(&regmap, &args.output_path, &tera_sv);
+        if args.uvm_only == false {
+          generate_sv(&regmap, &args.output_path, &tera_sv);
+        }
         generate_ral(&regmap, &args.output_path, &tera_sv);
     });
 

@@ -111,6 +111,8 @@ pub struct Field {
     name: String,
     description: String,
     size_b: usize,
+    read_access: ReadAccess,
+    write_access: WriteAccess,
     offset_b: usize,
     default: Option<DefaultVal>,
 }
@@ -119,6 +121,8 @@ impl Field {
     pub fn from_opt(
         fields: &mut Iter<'_, String, parser::FieldOpt>,
         word_size: usize,
+        reg_rd_access: ReadAccess,
+        reg_wr_access: WriteAccess,
     ) -> Result<Vec<Self>, anyhow::Error> {
         let mut expanded_field = Vec::with_capacity(fields.len());
         let mut nxt_offset = 0;
@@ -143,6 +147,14 @@ impl Field {
                 name: name.clone(),
                 description: field.description.clone(),
                 size_b: field.size_b,
+                read_access: match field.read_access {
+                  Some(access) => access,
+                  None => reg_rd_access,
+                },
+                write_access: match field.write_access {
+                  Some(access) => access,
+                  None => reg_wr_access,
+                },
                 offset_b,
                 default: field.default.clone(),
             });
@@ -219,6 +231,7 @@ pub struct Register {
     read_access: ReadAccess,
     write_access: WriteAccess,
     offset: usize,
+    relative_offset: usize,
     default: DefaultVal,
     field: Option<Vec<Field>>,
 }
@@ -284,6 +297,12 @@ impl Register {
             };
             let mut reg_offset = align_on(bytes_align, raw_offset);
 
+            let raw_rel_offset = match register.offset {
+                Some(ofst) => ofst,
+                None => auto_offset-section_offset,
+            };
+            let mut reg_rel_offset = align_on(bytes_align, raw_rel_offset);
+
             // Check correctness of offset
             if reg_offset < auto_offset {
                 return Err(RegmapError::Offset {
@@ -297,7 +316,7 @@ impl Register {
             // Expand inner
             let expand_field = match register.field.as_ref() {
                 Some(fields) => {
-                    let concrete_fields = Field::from_opt(&mut fields.iter(), word_size)?;
+                    let concrete_fields = Field::from_opt(&mut fields.iter(), word_size, register.read_access, register.write_access)?;
                     Some(concrete_fields)
                 }
                 None => None,
@@ -343,6 +362,7 @@ impl Register {
                 read_access: register.read_access,
                 write_access: register.write_access,
                 offset: reg_offset,
+                relative_offset: reg_rel_offset,
                 default,
                 field: expand_field,
             };
@@ -360,6 +380,8 @@ impl Register {
                 if i != 0 {
                     reg_offset = align_on(bytes_align, reg_offset + word_bytes);
                     reg.offset = reg_offset;
+                    reg_rel_offset = align_on(bytes_align, reg_rel_offset + word_bytes);
+                    reg.relative_offset = reg_rel_offset;
                 }
                 // Insert in regmap
                 expanded_register.push(reg.clone());
