@@ -169,6 +169,10 @@ pub struct SvRalSection {
 }
 
 impl SvRalSection {
+    pub fn new(name: String, sctd_snippet: String, offset: String) -> Self {
+        Self { name, sctd_snippet, offset }
+    }
+
     pub fn from_section(
         section: &Section,
         tera: &Tera,
@@ -200,6 +204,26 @@ pub struct SvRalReg {
 }
 
 
+fn make_sv_fields(register: &Register, fallback_name: &str) -> Vec<SvRalField> {
+    if let Some(fields) = register.field() {
+        fields.iter().map(SvRalField::from_field).collect()
+    } else {
+        vec![SvRalField {
+            name: fallback_name.to_string(),
+            reset: Some(register.default().clone()),
+            access: match (register.read_access(), register.write_access()) {
+                (ReadAccess::Read, WriteAccess::Write) => SvRAlAccess::RW,
+                (ReadAccess::None, WriteAccess::Write) => SvRAlAccess::WO,
+                (ReadAccess::Read, WriteAccess::None)  => SvRAlAccess::RO,
+                (ReadAccess::None, WriteAccess::None)  => panic!("Can't have unaccessible registers"),
+                (_, WriteAccess::WriteNotify) => SvRAlAccess::RW,
+                (ReadAccess::ReadNotify, _) => SvRAlAccess::RW,
+            },
+            ..Default::default()
+        }]
+    }
+}
+
 impl SvRalReg {
     pub fn from_register(
         section: &Section,
@@ -209,30 +233,7 @@ impl SvRalReg {
         let mut context = tera::Context::new();
         let reg_name = format!("{}_{}", section.name().to_lowercase(), register.name().to_lowercase());
         context.insert("reg_name", &reg_name);
-
-        let mut sv_fields = Vec::new();
-        if let Some(fields) = register.field() {
-            for f in fields {
-                sv_fields.push(SvRalField::from_field( f ) );
-            }
-        }
-        else {
-            sv_fields.push(
-                SvRalField{
-                    name: format!("{}", reg_name),
-                    reset: Some(register.default().clone()),
-                    access: match (register.read_access(), register.write_access()) {
-                      (ReadAccess::Read, WriteAccess::Write) => SvRAlAccess::RW,
-                      (ReadAccess::None, WriteAccess::Write) => SvRAlAccess::WO,
-                      (ReadAccess::Read, WriteAccess::None)  => SvRAlAccess::RO,
-                      (ReadAccess::None, WriteAccess::None)  => panic!("Can't have unaccessible registers"),
-                      (_, WriteAccess::WriteNotify) => SvRAlAccess::RW,//todo!("WriteNotify not yet implemented"),
-                      (ReadAccess::ReadNotify, _) => SvRAlAccess::RW,//todo!("ReadNotify not yet implemented"),
-                    },
-                    ..Default::default()
-                }
-             );
-        }
+        let sv_fields = make_sv_fields(register, &reg_name);
         context.insert("sv_fields", &sv_fields);
 
         let regd_snippet = tera.render("ral/ral_reg_dclr.sv", &context).unwrap();
@@ -349,4 +350,102 @@ impl Default for SvRalField {
             reset: None,
             individually_accessible: String::from("0"), }
         }
+}
+
+/// Represents all generated classes for one group of duplicate sections.
+///
+/// For a section `Foo` with `duplicate=["_a","_b"]`, the group has:
+///   base_name = "foo"
+///   instances = [foo_a_section (thin wrapper), foo_b_section (thin wrapper)]
+///   base register class `foo_<reg>_base_reg` holds all field definitions
+///   per-instance register classes `foo_a_<reg>_reg` / `foo_b_<reg>_reg` extend it
+///   base section class `foo_base_section` references base register types
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct SvRalDupGroup {
+    pub base_name: String,
+    pub base_reg_names: Vec<String>,
+    pub base_reg_snippets: Vec<String>,
+    pub inst_reg_names: Vec<String>,
+    pub inst_reg_snippets: Vec<String>,
+    pub base_sct_snippet: String,
+    pub instances: Vec<SvRalSection>,
+    /// Short register field names (e.g. "cps", "ctrl") used to generate
+    /// per-register arrays: `key_cps_list[N]` of type `key_cps_base_reg`.
+    pub reg_field_names: Vec<String>,
+}
+
+impl SvRalDupGroup {
+    pub fn from_sections(
+        base_name: &str,
+        sections: &[&Section],
+        tera: &Tera,
+    ) -> Self {
+        assert!(!sections.is_empty(), "duplicate group must have at least one section");
+        let first = sections[0];
+
+        let mut base_reg_names = Vec::new();
+        let mut base_reg_snippets = Vec::new();
+        let mut inst_reg_names = Vec::new();
+        let mut inst_reg_snippets = Vec::new();
+        let mut reg_field_names = Vec::new();
+
+        for reg in first.register() {
+            reg_field_names.push(reg.name().to_lowercase());
+            // Base register class: reuse ral_reg_dclr.sv with "<base>_<reg>_base" as name
+            // -> template emits: class <reg_name>_reg extends uvm_reg
+            // -> result:         class foo_myreg_base_reg extends uvm_reg
+            let base_reg_name = format!("{}_{}_base", base_name, reg.name().to_lowercase());
+            base_reg_names.push(base_reg_name.clone());
+
+            let sv_fields = make_sv_fields(reg, &base_reg_name);
+            let mut ctx = tera::Context::new();
+            ctx.insert("reg_name", &base_reg_name);
+            ctx.insert("sv_fields", &sv_fields);
+            base_reg_snippets.push(tera.render("ral/ral_reg_dclr.sv", &ctx).unwrap());
+
+            // Per-instance thin wrapper: class foo_a_myreg_reg extends foo_myreg_base_reg
+            for sec in sections {
+                let inst_reg_name = format!("{}_{}", sec.name().to_lowercase(), reg.name().to_lowercase());
+                inst_reg_names.push(inst_reg_name.clone());
+
+                let mut ctx = tera::Context::new();
+                ctx.insert("reg_name", &inst_reg_name);
+                ctx.insert("base_reg_name", &base_reg_name);
+                inst_reg_snippets.push(tera.render("ral/ral_inst_reg_dclr.sv", &ctx).unwrap());
+            }
+        }
+
+        // Base section class referencing base register types
+        let mut registers: Vec<&Register> = first.register().iter().collect();
+        let mut ctx = tera::Context::new();
+        ctx.insert("base_name", base_name);
+        ctx.insert("registers", &registers);
+        let base_sct_snippet = tera.render("ral/ral_base_sct_dclr.sv", &ctx).unwrap();
+
+        // Per-instance thin section wrappers
+        let mut instances = Vec::new();
+        for sec in sections {
+            let sec_name = sec.name().to_lowercase();
+            let mut ctx = tera::Context::new();
+            ctx.insert("section_name", &sec_name);
+            ctx.insert("base_name", base_name);
+            let inst_sct_snippet = tera.render("ral/ral_inst_sct_dclr.sv", &ctx).unwrap();
+            instances.push(SvRalSection::new(
+                sec_name,
+                inst_sct_snippet,
+                format!("{:x}", sec.offset()),
+            ));
+        }
+
+        Self {
+            base_name: base_name.to_string(),
+            base_reg_names,
+            base_reg_snippets,
+            inst_reg_names,
+            inst_reg_snippets,
+            base_sct_snippet,
+            instances,
+            reg_field_names,
+        }
+    }
 }
