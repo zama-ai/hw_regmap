@@ -425,6 +425,9 @@ pub struct Section {
     bytes_align: usize,
     range: usize,
     register: Vec<Register>,
+    /// Lowercase TOML key of the originating section when this is a duplicate instance.
+    /// All sections sharing the same base_name belong to the same duplicate group.
+    base_name: Option<String>,
 }
 
 impl Section {
@@ -527,6 +530,11 @@ impl Section {
                     range,
                     bytes_align,
                     register,
+                    base_name: if section.duplicate.is_some() {
+                        Some(name.to_lowercase())
+                    } else {
+                        None
+                    },
                 });
                 // update auto_offset
                 auto_offset = sec_offset + range;

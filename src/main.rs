@@ -204,26 +204,45 @@ fn generate_ral(regmap: &regmap::Regmap, output_path: &str, engine: &Tera) {
     let mut ral_regs = Vec::new();
     let mut ral_scts = Vec::new();
 
-    regmap.section().iter().for_each(|sec| {
-        ral_scts.push(generator::SvRalSection::from_section(
-            sec,
-            engine,
-        ));
-        sec.register().iter().for_each(|reg| {
-            ral_regs.push(generator::SvRalReg::from_register(
-                sec,
-                reg,
-                engine,
-            ));
+    // Collect duplicate groups preserving encounter order
+    let sections = regmap.section();
+    let mut dup_group_order: Vec<String> = Vec::new();
+    let mut dup_group_map: HashMap<String, Vec<usize>> = HashMap::new();
+
+    for (i, sec) in sections.iter().enumerate() {
+        match sec.base_name().as_deref() {
+            Some(base_name) => {
+                if !dup_group_map.contains_key(base_name) {
+                    dup_group_order.push(base_name.to_string());
+                }
+                dup_group_map.entry(base_name.to_string()).or_default().push(i);
+            }
+            None => {
+                ral_scts.push(generator::SvRalSection::from_section(sec, engine));
+                sec.register().iter().for_each(|reg| {
+                    ral_regs.push(generator::SvRalReg::from_register(sec, reg, engine));
+                });
+            }
+        }
+    }
+
+    let ral_dup_groups: Vec<generator::SvRalDupGroup> = dup_group_order
+        .iter()
+        .map(|base_name| {
+            let group_secs: Vec<&regmap::Section> = dup_group_map[base_name]
+                .iter()
+                .map(|&i| &sections[i])
+                .collect();
+            generator::SvRalDupGroup::from_sections(base_name, &group_secs, engine)
         })
-    });
+        .collect();
 
     let mut context = tera::Context::new();
     context.insert("module_name", &regmap.module_name());
     context.insert("ral_regs", &ral_regs);
     context.insert("ral_scts", &ral_scts);
+    context.insert("ral_dup_groups", &ral_dup_groups);
 
-    // Convert regmap in rtl snippets based on Tera
     let ral_rendered = engine.render("ral/ral_pkg.sv", &context).unwrap();
     std::fs::write(&ral_pkg, ral_rendered)
         .unwrap_or_else(|_| panic!("Unable to write file {ral_pkg}"));
