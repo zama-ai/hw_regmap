@@ -238,6 +238,9 @@ fn generate_ral(regmap: &regmap::Regmap, output_path: &str, engine: &Tera) {
         .collect();
 
     let mut context = tera::Context::new();
+    // Extract version from env
+    let git_version = option_env!("GIT_VERSION").unwrap_or("unknown");
+    context.insert("tool_version", git_version);
     context.insert("module_name", &regmap.module_name());
     context.insert("ral_regs", &ral_regs);
     context.insert("ral_scts", &ral_scts);
