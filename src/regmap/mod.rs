@@ -189,7 +189,7 @@ impl Field {
                     }
                     Some(DefaultVal::Cst(val)) => {
                         // Update name_val only
-                        name_val.push((field.name.clone(), format!("'h{val:x}")));
+                        name_val.push((field.name.clone(), format!("{}'h{val:x}",field.size_b)));
                     }
                     Some(DefaultVal::ParamsField { .. }) => {
                         return Err(RegmapError::DfltInvalid {
@@ -200,7 +200,7 @@ impl Field {
                     }
                     None => {
                         // Update name_val only with 0 value
-                        name_val.push((field.name.clone(), "'h0".to_string()));
+                        name_val.push((field.name.clone(), "'0".to_string()));
                     }
                 };
             }

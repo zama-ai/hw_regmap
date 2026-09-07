@@ -126,8 +126,8 @@ import {{module_name}}_pkg::*;
   logic s_axil_wr_add_ok;
   logic s_axil_rd_add_ok;
 
-  assign s_axil_wr_add_ok = (s_axil_awaddr & AXIL_ADD_OFS_MASK) == AXIL_ADD_OFS;
-  assign s_axil_rd_add_ok = (s_axil_araddr & AXIL_ADD_OFS_MASK) == AXIL_ADD_OFS;
+  assign s_axil_wr_add_ok = (s_axil_awaddr & AXIL_ADD_OFS_MASK) == AXIL_ADD_W'(AXIL_ADD_OFS);
+  assign s_axil_rd_add_ok = (s_axil_araddr & AXIL_ADD_OFS_MASK) == AXIL_ADD_W'(AXIL_ADD_OFS);
 
   //== Local read/write signals
   // Write when address and data are available.
