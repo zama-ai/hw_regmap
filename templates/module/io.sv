@@ -10,7 +10,7 @@
     {% endif -%}
     {%  if reg_update -%}
         {%  if have_fields -%}
-        , input {{name}}_t r_{{name}}_upd 
+        , input {{name}}_t r_{{name}}_upd
         {% else -%}
         , input  logic [REG_DATA_W-1: 0] r_{{name}}_upd
         {% endif -%}

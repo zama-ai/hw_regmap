@@ -148,12 +148,12 @@ impl Field {
                 description: field.description.clone(),
                 size_b: field.size_b,
                 read_access: match field.read_access {
-                  Some(access) => access,
-                  None => reg_rd_access,
+                    Some(access) => access,
+                    None => reg_rd_access,
                 },
                 write_access: match field.write_access {
-                  Some(access) => access,
-                  None => reg_wr_access,
+                    Some(access) => access,
+                    None => reg_wr_access,
                 },
                 offset_b,
                 default: field.default.clone(),
@@ -189,7 +189,7 @@ impl Field {
                     }
                     Some(DefaultVal::Cst(val)) => {
                         // Update name_val only
-                        name_val.push((field.name.clone(), format!("'h{val:x}")));
+                        name_val.push((field.name.clone(), format!("{}'h{val:x}", field.size_b)));
                     }
                     Some(DefaultVal::ParamsField { .. }) => {
                         return Err(RegmapError::DfltInvalid {
@@ -200,7 +200,7 @@ impl Field {
                     }
                     None => {
                         // Update name_val only with 0 value
-                        name_val.push((field.name.clone(), "'h0".to_string()));
+                        name_val.push((field.name.clone(), format!("{}'h0", field.size_b)));
                     }
                 };
             }
@@ -299,7 +299,7 @@ impl Register {
 
             let raw_rel_offset = match register.offset {
                 Some(ofst) => ofst,
-                None => auto_offset-section_offset,
+                None => auto_offset - section_offset,
             };
             let mut reg_rel_offset = align_on(bytes_align, raw_rel_offset);
 
@@ -316,7 +316,12 @@ impl Register {
             // Expand inner
             let expand_field = match register.field.as_ref() {
                 Some(fields) => {
-                    let concrete_fields = Field::from_opt(&mut fields.iter(), word_size, register.read_access, register.write_access)?;
+                    let concrete_fields = Field::from_opt(
+                        &mut fields.iter(),
+                        word_size,
+                        register.read_access,
+                        register.write_access,
+                    )?;
                     Some(concrete_fields)
                 }
                 None => None,
